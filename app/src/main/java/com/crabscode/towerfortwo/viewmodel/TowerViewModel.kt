@@ -117,13 +117,6 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { preferences.saveGame(updated) }
     }
 
-    fun selectTargetSlot(slot: Int) {
-        val game = _uiState.value.game
-        val safeSlot = slot.coerceIn(1, 3)
-        if (!game.isInProgress || game.isFinished || game.isPlaced(game.targetLevel, safeSlot)) return
-        viewModelScope.launch { preferences.saveGame(game.copy(targetSlot = safeSlot)) }
-    }
-
     fun nextFloor() {
         val game = _uiState.value.game
         if (!game.isInProgress || game.isFinished || !game.canAdvanceFloor) return

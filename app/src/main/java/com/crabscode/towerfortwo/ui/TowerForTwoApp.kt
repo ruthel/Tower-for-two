@@ -129,7 +129,6 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
             GameScreen(
                 state = state,
                 onBlockPlaced = viewModel::placeBlock,
-                onSelectSlot = viewModel::selectTargetSlot,
                 onNextFloor = viewModel::nextFloor,
                 onJoker = viewModel::useJoker,
                 onRerollSexPosition = viewModel::rerollSexPosition,
@@ -452,7 +451,6 @@ private fun PlayerValidatedCard(
 private fun GameScreen(
     state: GameUiState,
     onBlockPlaced: () -> Unit,
-    onSelectSlot: (Int) -> Unit,
     onNextFloor: () -> Unit,
     onJoker: () -> Unit,
     onRerollSexPosition: () -> Unit,
@@ -469,18 +467,72 @@ private fun GameScreen(
     val slot = challenge?.slot ?: game.nextSlot
     val actor = game.challengePlayerIndex?.let(game::playerName)
 
-    Scaffold { padding ->
+    Scaffold(
+        bottomBar = {
+            if (!game.isFinished) {
+                Surface(
+                    tonalElevation = 8.dp,
+                    shadowElevation = 12.dp,
+                    color = MaterialTheme.colorScheme.background,
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        OutlinedButton(
+                            onClick = onJoker,
+                            enabled = challenge != null,
+                            modifier = Modifier.weight(1f).height(58.dp),
+                            shape = RoundedCornerShape(
+                                topStart = 28.dp,
+                                bottomStart = 28.dp,
+                                topEnd = 12.dp,
+                                bottomEnd = 12.dp,
+                            ),
+                        ) {
+                            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.size(7.dp))
+                            Text("JOKER", fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = onBlockPlaced,
+                            enabled = game.isInProgress &&
+                                !game.isFinished &&
+                                !game.isPlaced(game.targetLevel, game.targetSlot),
+                            modifier = Modifier.weight(1f).height(58.dp),
+                            shape = RoundedCornerShape(
+                                topStart = 12.dp,
+                                bottomStart = 12.dp,
+                                topEnd = 28.dp,
+                                bottomEnd = 28.dp,
+                            ),
+                        ) {
+                            Text(
+                                "BLOC ${game.targetSlot} POSÉ",
+                                fontWeight = FontWeight.Black,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+    ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .navigationBarsPadding()
                 .imePadding(),
             contentPadding = PaddingValues(
                 start = 18.dp,
                 end = 18.dp,
-                top = 24.dp,
-                bottom = 36.dp,
+                top = 18.dp,
+                bottom = 24.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -555,11 +607,11 @@ private fun GameScreen(
             if (challenge == null) {
                 item {
                     Card(
-                        modifier = Modifier.fillMaxWidth().height(280.dp),
-                        shape = RoundedCornerShape(28.dp),
+                        modifier = Modifier.fillMaxWidth().height(250.dp),
+                        shape = RoundedCornerShape(26.dp),
                     ) {
                         Column(
-                            Modifier.fillMaxSize().padding(28.dp),
+                            Modifier.fillMaxSize().padding(26.dp),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
@@ -568,12 +620,12 @@ private fun GameScreen(
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold,
                             )
-                            Spacer(Modifier.height(18.dp))
+                            Spacer(Modifier.height(14.dp))
                             Text(
-                                "Posez le premier bloc au-dessus de la tour, puis appuyez sur BLOC POSÉ.",
+                                "Pose un bloc au-dessus de la tour, puis appuie sur BLOC POSÉ.",
                                 textAlign = TextAlign.Center,
-                                fontSize = 24.sp,
-                                lineHeight = 32.sp,
+                                fontSize = 23.sp,
+                                lineHeight = 31.sp,
                             )
                         }
                     }
@@ -598,84 +650,72 @@ private fun GameScreen(
                         textAlign = TextAlign.Center,
                     )
                 }
-
-                item {
-                    OutlinedButton(
-                        onClick = onJoker,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                    ) {
-                        Icon(Icons.Default.Refresh, null)
-                        Spacer(Modifier.size(8.dp))
-                        Text("PASSER / JOKER")
-                    }
-                }
             }
 
             if (!game.isFinished) {
                 item {
-                    Text(
-                        "Prochain placement · Étage ${16 + game.targetLevel} · Bloc ${game.targetSlot}/3",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        fontSize = 17.sp,
-                    )
-                }
-
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                     ) {
-                        (1..3).forEach { target ->
-                            FilterChip(
-                                selected = game.targetSlot == target,
-                                onClick = { onSelectSlot(target) },
-                                enabled = !game.isPlaced(game.targetLevel, target),
-                                label = { Text("Bloc $target") },
-                                modifier = Modifier.weight(1f),
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Column {
+                                Text(
+                                    "Étage ${16 + game.targetLevel}",
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    "${game.placedOnCurrentLevel}/3 blocs posés",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 12.sp,
+                                )
+                            }
+                            Text(
+                                "Prochain · ${game.targetSlot}/3",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
                             )
                         }
                     }
                 }
 
-                item {
-                    OutlinedButton(
-                        onClick = onNextFloor,
-                        enabled = game.canAdvanceFloor,
-                        modifier = Modifier.fillMaxWidth().height(54.dp),
-                    ) {
-                        Text("PASSER À L'ÉTAGE SUIVANT")
+                if (game.targetLevel < 10) {
+                    item {
+                        OutlinedButton(
+                            onClick = onNextFloor,
+                            enabled = game.canAdvanceFloor,
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(18.dp),
+                        ) {
+                            Text("PASSER À L'ÉTAGE SUIVANT")
+                        }
                     }
-                }
 
-                if (!game.hasPlacedOnLevel(game.targetLevel) && game.targetLevel < 10) {
+                    if (!game.canAdvanceFloor) {
+                        item {
+                            Text(
+                                "Pose au moins 1 bloc à cet étage avant de passer au suivant.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 12.sp,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                } else {
                     item {
                         Text(
-                            "Pose au moins 1 bloc à cet étage avant de passer au suivant.",
+                            "Dernier étage · pose les 3 blocs pour terminer la partie.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp,
                             modifier = Modifier.fillMaxWidth(),
                             textAlign = TextAlign.Center,
                         )
                     }
-                }
-            }
-
-            item {
-                Button(
-                    onClick = onBlockPlaced,
-                    enabled = game.isInProgress &&
-                        !game.isFinished &&
-                        !game.isPlaced(game.targetLevel, game.targetSlot),
-                    modifier = Modifier.fillMaxWidth().height(68.dp),
-                ) {
-                    Text(
-                        if (game.isFinished) "PARTIE TERMINÉE" else "BLOC ${game.targetSlot} POSÉ",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Black,
-                    )
                 }
             }
         }

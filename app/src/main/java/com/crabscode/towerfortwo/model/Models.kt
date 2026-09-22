@@ -126,14 +126,19 @@ data class GameState(
     val completedLevelCount: Int
         get() = if (isFinished) 10 else (nextLevel - 1).coerceIn(0, 9)
 
+    val placedOnCurrentLevel: Int
+        get() = placedCountOnLevel(targetLevel)
+
     val canAdvanceFloor: Boolean
-        get() = targetLevel < 10 && hasPlacedOnLevel(targetLevel)
+        get() = targetLevel < 10 && placedOnCurrentLevel >= 1
 
     fun playerName(index: Int): String = if (index == 0) player1 else player2
     fun playerGender(index: Int): PlayerGender = if (index == 0) player1Gender else player2Gender
     fun positionKey(level: Int, slot: Int): String = "$level:$slot"
     fun isPlaced(level: Int, slot: Int): Boolean = positionKey(level, slot) in placedPositions
-    fun hasPlacedOnLevel(level: Int): Boolean = placedPositions.any { it.startsWith("$level:") }
+    fun placedCountOnLevel(level: Int): Int =
+        placedPositions.count { it.startsWith("$level:") }
+    fun hasPlacedOnLevel(level: Int): Boolean = placedCountOnLevel(level) > 0
 
     fun resolvedSexualAction(): ResolvedSexualAction? {
         val practice = selectedSexualPractice ?: return null
