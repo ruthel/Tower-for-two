@@ -11,14 +11,28 @@ android {
         applicationId = "com.crabscode.towerfortwo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.5.0"
+        versionCode = 12
+        versionName = "1.5.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
 
+    // Fixed development key so every CI debug APK has the same signature.
+    // Never use this public debug key for Play Store / production releases.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("tower-for-two-debug.keystore")
+            storePassword = "TowerForTwoDebug2026!"
+            keyAlias = "tower-debug"
+            keyPassword = "TowerForTwoDebug2026!"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

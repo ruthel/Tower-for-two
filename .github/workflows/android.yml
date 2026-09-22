@@ -37,8 +37,18 @@ jobs:
       - name: Unit tests
         run: gradle testDebugUnitTest --stacktrace
 
-      - name: Assemble debug APK
+      - name: Assemble fixed-signed debug APK
         run: gradle assembleDebug --stacktrace
+
+      - name: Verify fixed debug signature
+        shell: bash
+        run: |
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          CERT=$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK" | awk -F': ' '/certificate SHA-256 digest/ {print $2; exit}')
+          EXPECTED="db2bf509cf41d8d287390db01f6dfc9d14d58dcf5667e7507fc02fedb1d6e04f"
+          test "$CERT" = "$EXPECTED"
+          echo "Fixed debug signing certificate verified: $CERT"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
