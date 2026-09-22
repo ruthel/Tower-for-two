@@ -1556,7 +1556,20 @@ private fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Paramètres") },
+                title = {
+                    Column {
+                        Text(
+                            "Paramètres",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            "Préférences du jeu",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
@@ -1566,14 +1579,16 @@ private fun SettingsScreen(
         },
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .navigationBarsPadding(),
+            contentPadding = PaddingValues(horizontal = 22.dp, vertical = 8.dp),
         ) {
             item {
                 SettingsSection(
                     title = "Intensité",
-                    subtitle = "Détermine à quel moment commence la fin exclusivement sexuelle.",
+                    subtitle = "Détermine le rythme général et le moment où commence le final.",
                 ) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1583,25 +1598,34 @@ private fun SettingsScreen(
                             FilterChip(
                                 selected = state.settings.intensity == intensity,
                                 onClick = { viewModel.setIntensity(intensity) },
-                                label = { Text(intensity.label) },
+                                label = {
+                                    Text(
+                                        intensity.label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                },
                             )
                         }
                     }
+
                     Text(
                         when (state.settings.intensity) {
-                            Intensity.SENSUEL -> "Final sexuel : niveau 10"
-                            Intensity.TORRIDE -> "Final sexuel : niveaux 9–10"
-                            Intensity.VERY_HOT -> "Final sexuel : niveaux 8–10"
+                            Intensity.SENSUEL -> "Final : niveau 10"
+                            Intensity.TORRIDE -> "Final : niveaux 9–10"
+                            Intensity.VERY_HOT -> "Final : niveaux 8–10"
                         },
                         color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp,
                     )
                 }
             }
 
             item {
-                SettingsSection(title = "Préférences") {
+                SettingsSection(
+                    title = "Préférences",
+                    subtitle = "Ces choix sont appliqués immédiatement et conservés sur l'appareil.",
+                ) {
                     SettingSwitch(
                         "Retrait de vêtements",
                         state.settings.allowClothing,
@@ -1623,11 +1647,14 @@ private fun SettingsScreen(
             item {
                 SettingsSection(
                     title = "Pratiques du final",
-                    subtitle = "Au moins une pratique reste toujours active pour éviter de bloquer la partie.",
+                    subtitle = "Choisis ce que l'application peut proposer. Au moins une pratique reste active.",
                 ) {
                     SexualPractice.playable.forEach { practice ->
                         val checked = practice in state.settings.allowedSexualPractices
-                        SettingSwitch(practice.label, checked) { enabled ->
+                        SettingSwitch(
+                            title = practice.label,
+                            checked = checked,
+                        ) { enabled ->
                             viewModel.setSexualPracticeAllowed(practice, enabled)
                         }
                     }
@@ -1635,24 +1662,41 @@ private fun SettingsScreen(
             }
 
             item {
-                OutlinedButton(
-                    onClick = onCustom,
-                    modifier = Modifier.fillMaxWidth(),
+                SettingsSection(
+                    title = "Contenu personnalisé",
+                    subtitle = "Tes propres actions et vérités sont enregistrées localement.",
                 ) {
-                    Icon(Icons.Default.Edit, null)
-                    Spacer(Modifier.size(8.dp))
-                    Text("Mes défis personnalisés")
+                    OutlinedButton(
+                        onClick = onCustom,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                    ) {
+                        Icon(Icons.Default.Edit, null)
+                        Spacer(Modifier.size(8.dp))
+                        Text("MES DÉFIS PERSONNALISÉS")
+                    }
                 }
             }
 
             item {
-                Text(
-                    "Aucun compte ni serveur. Toutes les données restent sur cet appareil.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                )
+                SettingsSection(
+                    title = "Données & confidentialité",
+                    subtitle = null,
+                    showDivider = false,
+                ) {
+                    Text(
+                        "Joueurs, réglages, progression, historique anti-répétition, onboarding et défis personnalisés sont sauvegardés dans les préférences locales de l'application.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                        lineHeight = 21.sp,
+                    )
+                    Text(
+                        "Aucun compte · aucun serveur · aucune connexion requise",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
         }
     }
@@ -1662,38 +1706,65 @@ private fun SettingsScreen(
 private fun SettingsSection(
     title: String,
     subtitle: String? = null,
+    showDivider: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            subtitle?.let {
-                Text(
-                    it,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp,
-                )
-            }
-            content()
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+
+        subtitle?.let {
+            Text(
+                it,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+                lineHeight = 18.sp,
+            )
+        }
+
+        content()
+
+        Spacer(Modifier.height(12.dp))
+
+        if (showDivider) {
+            HorizontalDivider(
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+            )
         }
     }
 }
 
 @Composable
-private fun SettingSwitch(title: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
+private fun SettingSwitch(
+    title: String,
+    checked: Boolean,
+    onChecked: (Boolean) -> Unit,
+) {
     Row(
-        Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text(title, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChecked)
+        Text(
+            title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onChecked,
+        )
     }
 }
 
