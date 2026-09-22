@@ -411,41 +411,63 @@ private fun GameScreen(
             }
         },
     ) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp),
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text("Étage ${16 + level} — Bloc $slot/3", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            LevelProgress(currentLevel = game.targetLevel, completed = game.completedLevelCount)
+            item {
+                Text("Étage ${16 + level} — Bloc $slot/3", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            item {
+                LevelProgress(currentLevel = game.targetLevel, completed = game.completedLevelCount)
+            }
 
             if (challenge == null) {
-                Card(modifier = Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(28.dp)) {
-                    Column(
-                        Modifier.fillMaxSize().padding(28.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().height(280.dp),
+                        shape = RoundedCornerShape(28.dp),
                     ) {
-                        Text("Au tour de ${game.playerName(game.currentPlayerIndex)}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(18.dp))
-                        Text("Posez le premier bloc au-dessus de la tour, puis appuyez sur BLOC POSÉ.", textAlign = TextAlign.Center, fontSize = 24.sp, lineHeight = 32.sp)
+                        Column(
+                            Modifier.fillMaxSize().padding(28.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                "Au tour de ${game.playerName(game.currentPlayerIndex)}",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Spacer(Modifier.height(18.dp))
+                            Text(
+                                "Posez le premier bloc au-dessus de la tour, puis appuyez sur BLOC POSÉ.",
+                                textAlign = TextAlign.Center,
+                                fontSize = 24.sp,
+                                lineHeight = 32.sp,
+                            )
+                        }
                     }
                 }
             } else {
-                ChallengeCard(
-                    challenge = challenge,
-                    actor = actor,
-                    selectedSexualPractice = game.selectedSexualPractice,
-                    sexPosition = game.currentSexPosition,
-                    onSelectSexualPractice = onSelectSexualPractice,
-                    onRerollSexPosition = onRerollSexPosition,
-                )
-                Text(
-                    "Au tour de ${game.playerName(game.currentPlayerIndex)} pour le prochain bloc",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.weight(1f))
+                item {
+                    ChallengeCard(
+                        challenge = challenge,
+                        actor = actor,
+                        selectedSexualPractice = game.selectedSexualPractice,
+                        sexPosition = game.currentSexPosition,
+                        onSelectSexualPractice = onSelectSexualPractice,
+                        onRerollSexPosition = onRerollSexPosition,
+                    )
+                }
+                item {
+                    Text(
+                        "Au tour de ${game.playerName(game.currentPlayerIndex)} pour le prochain bloc",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
     }
