@@ -482,7 +482,7 @@ private fun GameScreen(
                 top = 24.dp,
                 bottom = 36.dp,
             ),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
                 Row(
@@ -492,7 +492,7 @@ private fun GameScreen(
                 ) {
                     Text(
                         "NIVEAU $level",
-                        fontSize = 30.sp,
+                        fontSize = 27.sp,
                         fontWeight = FontWeight.Black,
                     )
                     Box {
@@ -1177,32 +1177,82 @@ private fun SettingSwitch(title: String, checked: Boolean, onChecked: (Boolean) 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CustomChallengesScreen(state: GameUiState, viewModel: TowerViewModel, onBack: () -> Unit) {
+private fun CustomChallengesScreen(
+    state: GameUiState,
+    viewModel: TowerViewModel,
+    onBack: () -> Unit,
+) {
     var addDialog by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<Challenge?>(null) }
+
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Mes défis") }, navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
-            }
-        }, actions = { IconButton(onClick = { addDialog = true }) { Icon(Icons.Default.Add, "Ajouter") } }) },
-        floatingActionButton = { Button(onClick = { addDialog = true }) { Icon(Icons.Default.Add, null); Spacer(Modifier.size(6.dp)); Text("Ajouter") } },
+        topBar = {
+            TopAppBar(
+                title = { Text("Mes défis") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { addDialog = true }) {
+                        Icon(Icons.Default.Add, contentDescription = "Ajouter")
+                    }
+                },
+            )
+        },
     ) { padding ->
         if (state.customChallenges.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding).padding(24.dp), contentAlignment = Alignment.Center) {
-                Text("Aucun défi personnalisé. Ajoute tes propres actions ou vérités à n'importe quelle case.", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(
+                modifier = Modifier.fillMaxSize().padding(padding).padding(28.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("Aucun défi personnalisé", fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Ajoute une action ou une vérité à n'importe quel niveau.",
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(18.dp))
+                Button(onClick = { addDialog = true }) {
+                    Icon(Icons.Default.Add, null)
+                    Spacer(Modifier.size(6.dp))
+                    Text("AJOUTER")
+                }
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 items(state.customChallenges, key = { it.id }) { challenge ->
-                    Card {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Column(Modifier.weight(1f)) {
-                                Text("Niveau ${challenge.level} · Bloc ${challenge.slot} · ${if (challenge.type == ChallengeType.ACTION) "ACTION" else "VÉRITÉ"}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                                Text(challenge.text)
+                                Text(
+                                    "N${challenge.level} · Bloc ${challenge.slot} · ${if (challenge.type == ChallengeType.ACTION) "Action" else "Vérité"}",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(challenge.text, maxLines = 3)
                             }
-                            IconButton(onClick = { editTarget = challenge }) { Icon(Icons.Default.Edit, "Modifier") }
-                            IconButton(onClick = { viewModel.deleteCustomChallenge(challenge.id) }) { Icon(Icons.Default.Delete, "Supprimer") }
+                            IconButton(onClick = { editTarget = challenge }) {
+                                Icon(Icons.Default.Edit, "Modifier")
+                            }
+                            IconButton(onClick = { viewModel.deleteCustomChallenge(challenge.id) }) {
+                                Icon(Icons.Default.Delete, "Supprimer")
+                            }
                         }
                     }
                 }
@@ -1211,17 +1261,25 @@ private fun CustomChallengesScreen(state: GameUiState, viewModel: TowerViewModel
     }
 
     if (addDialog) {
-        AddChallengeDialog(initial = null, onDismiss = { addDialog = false }, onSave = { level, slot, text, intensity, clothing, fantasy, sexual ->
-            viewModel.addCustomChallenge(level, slot, text, intensity, clothing, fantasy, sexual)
-            addDialog = false
-        })
+        AddChallengeDialog(
+            initial = null,
+            onDismiss = { addDialog = false },
+            onSave = { level, slot, text, intensity, clothing, fantasy, sexual ->
+                viewModel.addCustomChallenge(level, slot, text, intensity, clothing, fantasy, sexual)
+                addDialog = false
+            },
+        )
     }
 
     editTarget?.let { target ->
-        AddChallengeDialog(initial = target, onDismiss = { editTarget = null }, onSave = { level, slot, text, intensity, clothing, fantasy, sexual ->
-            viewModel.updateCustomChallenge(target.id, level, slot, text, intensity, clothing, fantasy, sexual)
-            editTarget = null
-        })
+        AddChallengeDialog(
+            initial = target,
+            onDismiss = { editTarget = null },
+            onSave = { level, slot, text, intensity, clothing, fantasy, sexual ->
+                viewModel.updateCustomChallenge(target.id, level, slot, text, intensity, clothing, fantasy, sexual)
+                editTarget = null
+            },
+        )
     }
 }
 
@@ -1284,7 +1342,7 @@ private fun FallenScreen(state: GameUiState, onReplay: () -> Unit, onFreePlay: (
 
     val consequences = listOf(
         "Retirer un vêtement",
-        "Répondre honnêtement à une vérité très intime",
+        "Répondre à une vérité très intime",
         "Donner un massage ou une série de baisers",
         "Réaliser un défi sensuel choisi par l'autre",
     )
@@ -1306,51 +1364,44 @@ private fun FallenScreen(state: GameUiState, onReplay: () -> Unit, onFreePlay: (
 
     Scaffold { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
-            contentPadding = PaddingValues(top = 28.dp, bottom = 32.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).navigationBarsPadding(),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
+                Text("La tour est tombée", fontSize = 28.sp, fontWeight = FontWeight.Black)
                 Text(
-                    "LA TOUR EST TOMBÉE !",
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.Black,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
+                    "$fallen est à la merci de $chooser pendant 3 minutes.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    shape = RoundedCornerShape(24.dp),
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
-                    Column(
-                        Modifier.fillMaxWidth().padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    Row(
+                        Modifier.fillMaxWidth().padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text(
-                            "$fallen est à la merci de $chooser",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black,
-                        )
-                        Text(
-                            "Pendant 3 minutes, $chooser choisit un seul défi parmi les quatre options ci-dessous.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Column {
+                            Text("Niveau", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            Text("${game.reachedLevel}", fontWeight = FontWeight.Bold)
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Blocs", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            Text("${game.blocksPlaced}", fontWeight = FontWeight.Bold)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("Chute", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            Text(fallen, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
 
-            item {
-                ResultLine("Niveau atteint", "${game.reachedLevel}")
-                ResultLine("Blocs replacés", "${game.blocksPlaced}")
-                ResultLine("Tour tombée avec", fallen)
-            }
-
-            item {
-                Text("Choisir une seule conséquence", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            }
+            item { Text("Choisir une conséquence", fontWeight = FontWeight.Bold, fontSize = 18.sp) }
 
             consequences.forEach { consequence ->
                 item {
@@ -1363,67 +1414,39 @@ private fun FallenScreen(state: GameUiState, onReplay: () -> Unit, onFreePlay: (
                             }
                         },
                         enabled = !consequenceStarted,
-                        label = {
-                            Text(
-                                consequence,
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                            )
-                        },
+                        label = { Text(consequence, modifier = Modifier.padding(vertical = 4.dp)) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
 
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    shape = RoundedCornerShape(20.dp),
-                ) {
-                    Column(
-                        Modifier.fillMaxWidth().padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Text(
-                            "Règle",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            "Un seul défi, accepté par les deux avant de lancer le chrono. Une fois lancé, le choix est verrouillé : pas de changement de défi. Chacun peut toutefois arrêter à tout moment.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        FilterChip(
-                            selected = consentConfirmed,
-                            onClick = {
-                                if (!consequenceStarted) consentConfirmed = !consentConfirmed
-                            },
-                            enabled = !consequenceStarted && selectedConsequence != null,
-                            label = { Text("Nous sommes tous les deux d'accord") },
-                        )
-                    }
+                SettingSwitch("Nous sommes tous les deux d'accord", consentConfirmed) {
+                    if (!consequenceStarted && selectedConsequence != null) consentConfirmed = it
                 }
             }
 
             item {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (consequenceStarted) MaterialTheme.colorScheme.secondaryContainer
-                        else MaterialTheme.colorScheme.surface
-                    ),
-                    shape = RoundedCornerShape(24.dp),
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (consequenceStarted) {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
                 ) {
                     Column(
-                        Modifier.fillMaxWidth().padding(20.dp),
+                        Modifier.fillMaxWidth().padding(18.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text(
-                            if (consequenceFinished) "TEMPS ÉCOULÉ" else formatCountdown(remaining),
-                            fontSize = 44.sp,
+                            if (consequenceFinished) "Terminé" else formatCountdown(remaining),
+                            fontSize = 38.sp,
                             fontWeight = FontWeight.Black,
                         )
                         selectedConsequence?.let {
-                            Text(it, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold)
+                            Text(it, textAlign = TextAlign.Center)
                         }
 
                         if (!consequenceStarted) {
@@ -1433,36 +1456,41 @@ private fun FallenScreen(state: GameUiState, onReplay: () -> Unit, onFreePlay: (
                                     remaining = 180
                                 },
                                 enabled = selectedConsequence != null && consentConfirmed,
-                                modifier = Modifier.fillMaxWidth().height(58.dp),
-                            ) {
-                                Text("VALIDER ET LANCER 3:00")
-                            }
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text("LANCER 3:00") }
                         } else if (!consequenceFinished) {
                             OutlinedButton(
                                 onClick = { consequenceFinished = true },
                                 modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("ARRÊTER")
-                            }
+                            ) { Text("ARRÊTER") }
                         }
                     }
                 }
             }
 
             item {
-                Button(
-                    onClick = onReplay,
-                    enabled = !consequenceStarted || consequenceFinished,
-                    modifier = Modifier.fillMaxWidth().height(58.dp),
-                ) { Text("REJOUER") }
+                Text(
+                    "Un seul défi est choisi avant le chrono. Chacun peut arrêter à tout moment.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             item {
-                OutlinedButton(
-                    onClick = onFreePlay,
-                    enabled = game.blocksPlaced > 0 && (!consequenceStarted || consequenceFinished),
-                    modifier = Modifier.fillMaxWidth().height(58.dp),
-                ) { Text("CONTINUER LIBREMENT") }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(
+                        onClick = onFreePlay,
+                        enabled = game.blocksPlaced > 0 && (!consequenceStarted || consequenceFinished),
+                        modifier = Modifier.weight(1f),
+                    ) { Text("MODE LIBRE") }
+                    Button(
+                        onClick = onReplay,
+                        enabled = !consequenceStarted || consequenceFinished,
+                        modifier = Modifier.weight(1f),
+                    ) { Text("REJOUER") }
+                }
             }
         }
     }
@@ -1479,24 +1507,60 @@ private fun ResultLine(label: String, value: String) {
 @Composable
 private fun FreePlayScreen(state: GameUiState, onNext: () -> Unit, onReplay: () -> Unit) {
     val challenge = state.freePlayChallenge
-    Scaffold(bottomBar = {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = onNext, modifier = Modifier.fillMaxWidth().height(62.dp)) { Icon(Icons.Default.Refresh, null); Spacer(Modifier.size(8.dp)); Text("AUTRE DÉFI") }
-            TextButton(onClick = onReplay, modifier = Modifier.fillMaxWidth()) { Text("Rejouer depuis le début") }
-        }
-    }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(20.dp), verticalArrangement = Arrangement.Center) {
-            Text("MODE LIBRE", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black)
-            Text("Uniquement parmi les niveaux déjà débloqués.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(20.dp))
-            if (challenge != null) {
-                ChallengeCard(
-                    challenge = challenge,
-                    actor = null,
-                    game = state.game,
-                    settings = state.settings,
+
+    Scaffold { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding).navigationBarsPadding(),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item {
+                Text("Mode libre", fontSize = 28.sp, fontWeight = FontWeight.Black)
+                Text(
+                    "Défis tirés uniquement dans les niveaux déjà atteints.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            } else Text("Appuie sur AUTRE DÉFI pour commencer.")
+            }
+
+            item {
+                if (challenge != null) {
+                    ChallengeCard(
+                        challenge = challenge,
+                        actor = null,
+                        game = state.game,
+                        settings = state.settings,
+                    )
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        Text(
+                            "Tire un défi pour commencer.",
+                            modifier = Modifier.fillMaxWidth().padding(24.dp),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            }
+
+            item {
+                Button(
+                    onClick = onNext,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                ) {
+                    Icon(Icons.Default.Refresh, null)
+                    Spacer(Modifier.size(8.dp))
+                    Text("AUTRE DÉFI")
+                }
+            }
+
+            item {
+                TextButton(onClick = onReplay, modifier = Modifier.fillMaxWidth()) {
+                    Text("Rejouer depuis le début")
+                }
+            }
         }
     }
 }
+
