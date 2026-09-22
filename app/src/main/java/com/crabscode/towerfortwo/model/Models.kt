@@ -53,6 +53,30 @@ enum class SexStickerPose {
     STANDING_FACE_TO_FACE,
 }
 
+enum class SexPositionFamily(val label: String) {
+    FACE_TO_FACE("Face à face"),
+    SIDE("Sur le côté"),
+    SPOON("Cuillère"),
+    LYING("Allongé"),
+    SEATED("Assis"),
+    KNEELING("À genoux"),
+    TOP("Au-dessus"),
+    STANDING("Debout");
+
+    companion object {
+        fun fromPose(pose: SexStickerPose): SexPositionFamily = when (pose) {
+            SexStickerPose.FACE_TO_FACE -> FACE_TO_FACE
+            SexStickerPose.SIDE_BY_SIDE -> SIDE
+            SexStickerPose.SPOON -> SPOON
+            SexStickerPose.RECEIVER_LYING -> LYING
+            SexStickerPose.RECEIVER_SEATED, SexStickerPose.SEATED_EMBRACE -> SEATED
+            SexStickerPose.KNEELING -> KNEELING
+            SexStickerPose.PARTNER_ON_TOP -> TOP
+            SexStickerPose.STANDING_FACE_TO_FACE -> STANDING
+        }
+    }
+}
+
 data class SexPositionSpec(
     val id: String,
     val practice: SexualPractice,
@@ -61,6 +85,7 @@ data class SexPositionSpec(
     val sticker: SexStickerPose,
     val standing: Boolean = false,
     val minLevel: Int = practice.minLevel,
+    val family: SexPositionFamily = SexPositionFamily.fromPose(sticker),
 )
 
 data class ResolvedSexualAction(
@@ -109,6 +134,7 @@ data class GameState(
     val sexualReceiverIndex: Int? = null,
     val recentSexualPractices: List<String> = emptyList(),
     val recentSexPositionIds: List<String> = emptyList(),
+    val recentSexPositionFamilies: List<String> = emptyList(),
     val recentChallengeIds: List<String> = emptyList(),
     val countdownChallengeId: String? = null,
     val countdownInitialSec: Int = 0,
@@ -172,7 +198,11 @@ data class AppSettings(
     val allowFantasy: Boolean = true,
     val allowSexualPractices: Boolean = false,
     val allowedSexualPractices: Set<SexualPractice> = SexualPractice.playable.toSet(),
+    val preferredSexualPractices: Set<SexualPractice> = emptySet(),
+    val rejectedChallengeIds: Set<String> = emptySet(),
     val allowStandingSexPositions: Boolean = true,
+    val soundEnabled: Boolean = true,
+    val hapticsEnabled: Boolean = true,
     val onboardingCompleted: Boolean = false,
     val onboardingPage: Int = 0,
 ) {
@@ -187,9 +217,20 @@ data class AppSettings(
         level >= sexualFinalStartLevel
 }
 
+data class LifetimeStats(
+    val gamesStarted: Int = 0,
+    val gamesCompleted: Int = 0,
+    val towersFallen: Int = 0,
+    val blocksPlaced: Int = 0,
+    val jokersUsed: Int = 0,
+    val rejectedChallenges: Int = 0,
+    val freePlayDraws: Int = 0,
+)
+
 data class GameUiState(
     val game: GameState = GameState(),
     val settings: AppSettings = AppSettings(),
+    val stats: LifetimeStats = LifetimeStats(),
     val challenges: List<Challenge> = emptyList(),
     val currentChallenge: Challenge? = null,
     val freePlayChallenge: Challenge? = null,

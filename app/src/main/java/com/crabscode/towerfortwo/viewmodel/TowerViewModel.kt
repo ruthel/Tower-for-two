@@ -12,6 +12,7 @@ import com.crabscode.towerfortwo.model.Challenge
 import com.crabscode.towerfortwo.model.GameState
 import com.crabscode.towerfortwo.model.GameUiState
 import com.crabscode.towerfortwo.model.Intensity
+import com.crabscode.towerfortwo.model.LifetimeStats
 import com.crabscode.towerfortwo.model.PlayerGender
 import com.crabscode.towerfortwo.model.ResolvedSexualAction
 import com.crabscode.towerfortwo.model.SexPositionCatalog
@@ -35,12 +36,17 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             allChallenges = challengeRepository.loadAll()
-            combine(preferences.gameFlow, preferences.settingsFlow) { game, settings -> game to settings }
-                .collect { (game, settings) ->
+            combine(
+                preferences.gameFlow,
+                preferences.settingsFlow,
+                preferences.statsFlow,
+            ) { game, settings, stats -> Triple(game, settings, stats) }
+                .collect { (game, settings, stats) ->
                     _uiState.update {
                         it.copy(
                             game = game,
                             settings = settings,
+                            stats = stats,
                             challenges = allChallenges,
                             customChallenges = allChallenges.filter { c -> c.custom },
                             currentChallenge = game.currentChallengeId?.let { id -> allChallenges.find { c -> c.id == id } },
@@ -72,11 +78,14 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
                 placedPositions = emptySet(),
                 recentSexualPractices = previous.recentSexualPractices,
                 recentSexPositionIds = previous.recentSexPositionIds,
+                recentSexPositionFamilies = previous.recentSexPositionFamilies,
                 recentChallengeIds = previous.recentChallengeIds,
                 isInProgress = true,
             )
             _uiState.update { it.copy(freePlayChallenge = null) }
             preferences.saveGame(game)
+            val stats = _uiState.value.stats
+            preferences.saveStats(stats.copy(gamesStarted = stats.gamesStarted + 1))
         }
     }
 
@@ -168,7 +177,16 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             isFinished = finished,
         )
         updated = applyResolvedAction(updated, resolved)
-        viewModelScope.launch { preferences.saveGame(updated) }
+        viewModelScope.launch {
+            preferences.saveGame(updated)
+            val stats = _uiState.value.stats
+            preferences.saveStats(
+                stats.copy(
+                    blocksPlaced = stats.blocksPlaced + 1,
+                    gamesCompleted = stats.gamesCompleted + if (finished) 1 else 0,
+                )
+            )
+        }
     }
 
     fun nextFloor() {
@@ -236,6 +254,10 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             sexualGiverIndex = rerolled.giverPlayerIndex,
             sexualReceiverIndex = rerolled.receiverPlayerIndex,
             recentSexPositionIds = (state.game.recentSexPositionIds + rerolled.positionId).takeLast(8),
+            recentSexPositionFamilies = (
+                state.game.recentSexPositionFamilies +
+                    listOfNotNull(SexPositionCatalog.position(rerolled.positionId)?.family?.name)
+            ).takeLast(6),
         )
         viewModelScope.launch { preferences.saveGame(updated) }
     }
@@ -267,7 +289,70 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             countdownRunning = false,
         )
         updated = applyResolvedAction(updated, resolved)
-        viewModelScope.launch { preferences.saveGame(updated) }
+        viewModelScope.launch {
+            preferences.saveGame(updated)
+            val stats = _uiState.value.stats
+            preferences.saveStats(stats.copy(jokersUsed = stats.jokersUsed + 1))
+        }
+    }
+
+    fun rejectCurrentChallenge() {
+        val state = _uiState.value
+        val current = state.currentChallenge ?: return
+        val updatedSettings = state.settings.copy(
+            rejectedChallengeIds = state.settings.rejectedChallengeIds + current.id,
+        )
+        val replacement = pick(
+            level = current.level,
+            slot = current.slot,
+            settings = updatedSettings,
+            excludeId = current.id,
+            recentIds = state.game.recentChallengeIds,
+        ) ?: return
+
+        val actor = state.game.challengePlayerIndex ?: (1 - state.game.currentPlayerIndex)
+        val resolved = SexPositionCatalog.resolve(replacement, state.game, updatedSettings, actor)
+
+        var updatedGame = state.game.copy(
+            currentChallengeId = replacement.id,
+            selectedSexualPractice = null,
+            currentSexPosition = null,
+            currentSexDurationSec = 0,
+            sexualGiverIndex = null,
+            sexualReceiverIndex = null,
+            recentChallengeIds = (state.game.recentChallengeIds + replacement.id).takeLast(50),
+            countdownChallengeId = null,
+            countdownInitialSec = 0,
+            countdownRemainingSec = 0,
+            countdownRunning = false,
+        )
+        updatedGame = applyResolvedAction(updatedGame, resolved)
+
+        viewModelScope.launch {
+            preferences.saveSettings(updatedSettings)
+            preferences.saveGame(updatedGame)
+            val stats = _uiState.value.stats
+            preferences.saveStats(stats.copy(rejectedChallenges = stats.rejectedChallenges + 1))
+        }
+    }
+
+    fun rejectFreePlayChallenge() {
+        val state = _uiState.value
+        val current = state.freePlayChallenge ?: return
+        val updatedSettings = state.settings.copy(
+            rejectedChallengeIds = state.settings.rejectedChallengeIds + current.id,
+        )
+        val maxLevel = state.game.reachedLevel.coerceAtLeast(1)
+        val pool = allChallenges.filter { c ->
+            c.level <= maxLevel && challengeRepository.isEligibleChallenge(c, updatedSettings)
+        }
+
+        viewModelScope.launch {
+            preferences.saveSettings(updatedSettings)
+            val stats = _uiState.value.stats
+            preferences.saveStats(stats.copy(rejectedChallenges = stats.rejectedChallenges + 1))
+        }
+        chooseFreePlayChallenge(pool)
     }
 
     fun markTowerFallen(playerIndex: Int) {
@@ -279,6 +364,8 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
                     isInProgress = false,
                 )
             )
+            val stats = _uiState.value.stats
+            preferences.saveStats(stats.copy(towersFallen = stats.towersFallen + 1))
         }
     }
 
@@ -321,6 +408,8 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
                     recentChallengeIds = (state.game.recentChallengeIds + chosen.id).takeLast(50),
                 )
             )
+            val stats = _uiState.value.stats
+            preferences.saveStats(stats.copy(freePlayDraws = stats.freePlayDraws + 1))
         }
     }
 
@@ -330,13 +419,35 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
     fun setAllowSexualPractices(value: Boolean) = updateSettings(_uiState.value.settings.copy(allowSexualPractices = value))
     fun setAllowStandingSexPositions(value: Boolean) =
         updateSettings(_uiState.value.settings.copy(allowStandingSexPositions = value))
+    fun setSoundEnabled(value: Boolean) =
+        updateSettings(_uiState.value.settings.copy(soundEnabled = value))
+    fun setHapticsEnabled(value: Boolean) =
+        updateSettings(_uiState.value.settings.copy(hapticsEnabled = value))
+
+    fun setSexualPracticePreferred(practice: SexualPractice, value: Boolean) {
+        if (practice == SexualPractice.CHOICE) return
+        val settings = _uiState.value.settings
+        if (practice !in settings.allowedSexualPractices && value) return
+        val updated = if (value) {
+            settings.preferredSexualPractices + practice
+        } else {
+            settings.preferredSexualPractices - practice
+        }
+        updateSettings(settings.copy(preferredSexualPractices = updated))
+    }
 
     fun setSexualPracticeAllowed(practice: SexualPractice, value: Boolean) {
         if (practice == SexualPractice.CHOICE) return
         val current = _uiState.value.settings.allowedSexualPractices
         if (!value && practice in current && current.size <= 1) return
         val updated = if (value) current + practice else current - practice
-        updateSettings(_uiState.value.settings.copy(allowedSexualPractices = updated))
+        val settings = _uiState.value.settings
+        updateSettings(
+            settings.copy(
+                allowedSexualPractices = updated,
+                preferredSexualPractices = settings.preferredSexualPractices intersect updated,
+            )
+        )
     }
 
     private fun updateSettings(settings: AppSettings) {
@@ -432,6 +543,10 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             sexualReceiverIndex = resolved.receiverPlayerIndex,
             recentSexualPractices = (game.recentSexualPractices + resolved.practice.name).takeLast(6),
             recentSexPositionIds = (game.recentSexPositionIds + resolved.positionId).takeLast(8),
+            recentSexPositionFamilies = (
+                game.recentSexPositionFamilies +
+                    listOfNotNull(SexPositionCatalog.position(resolved.positionId)?.family?.name)
+            ).takeLast(6),
         )
     }
 

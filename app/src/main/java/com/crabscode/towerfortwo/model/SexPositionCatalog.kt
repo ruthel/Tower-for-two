@@ -197,22 +197,33 @@ object SexPositionCatalog {
         if (eligiblePractices.isEmpty()) return null
 
         val requested = challenge.sexualPractice?.takeUnless { it == SexualPractice.CHOICE }
-        val practicePool = if (requested != null && requested in eligiblePractices) {
+        val basePracticePool = if (requested != null && requested in eligiblePractices) {
             listOf(requested)
         } else {
             eligiblePractices
         }
+        val weightedPracticePool = basePracticePool.flatMap { practice ->
+            if (practice in settings.preferredSexualPractices) {
+                listOf(practice, practice, practice)
+            } else {
+                listOf(practice)
+            }
+        }
 
         val recentPractices = game.recentSexualPractices.takeLast(2).toSet()
-        val practice = practicePool.filterNot { it.name in recentPractices }
-            .ifEmpty { practicePool }
+        val practice = weightedPracticePool.filterNot { it.name in recentPractices }
+            .ifEmpty { weightedPracticePool }
             .random()
 
         val pool = positionsFor(practice, challenge.level, settings)
         if (pool.isEmpty()) return null
 
         val recentPositions = game.recentSexPositionIds.takeLast(4).toSet()
-        val position = pool.filterNot { it.id in recentPositions }
+        val recentFamilies = game.recentSexPositionFamilies.takeLast(2).toSet()
+        val position = pool
+            .filterNot { it.id in recentPositions || it.family.name in recentFamilies }
+            .ifEmpty { pool.filterNot { it.id in recentPositions } }
+            .ifEmpty { pool.filterNot { it.family.name in recentFamilies } }
             .ifEmpty { pool }
             .random()
 
@@ -236,7 +247,11 @@ object SexPositionCatalog {
     ): ResolvedSexualAction {
         val pool = positionsFor(current.practice, level, settings)
         val recent = (game.recentSexPositionIds.takeLast(4) + current.positionId).toSet()
-        val next = pool.filterNot { it.id in recent }
+        val currentFamily = position(current.positionId)?.family?.name
+        val recentFamilies = (game.recentSexPositionFamilies.takeLast(2) + listOfNotNull(currentFamily)).toSet()
+        val next = pool
+            .filterNot { it.id in recent || it.family.name in recentFamilies }
+            .ifEmpty { pool.filterNot { it.id in recent } }
             .ifEmpty { pool.filterNot { it.id == current.positionId } }
             .ifEmpty { pool }
             .random()

@@ -120,6 +120,7 @@ class ChallengeRepository(private val context: Context) {
 
     fun isEligibleChallenge(c: Challenge, settings: AppSettings): Boolean {
         if (!c.enabled) return false
+        if (c.id in settings.rejectedChallengeIds) return false
         if (!settings.allowClothing && c.clothing) return false
         if (!settings.allowFantasy && c.fantasy) return false
 

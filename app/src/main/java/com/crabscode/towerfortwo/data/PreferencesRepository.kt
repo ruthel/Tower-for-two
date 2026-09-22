@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import com.crabscode.towerfortwo.model.AppSettings
 import com.crabscode.towerfortwo.model.GameState
 import com.crabscode.towerfortwo.model.Intensity
+import com.crabscode.towerfortwo.model.LifetimeStats
 import com.crabscode.towerfortwo.model.PlayerGender
 import com.crabscode.towerfortwo.model.SexualPractice
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +36,7 @@ class PreferencesRepository(context: Context) {
         const val SEXUAL_RECEIVER = "sexual_receiver"
         const val RECENT_SEXUAL_PRACTICES = "recent_sexual_practices"
         const val RECENT_SEX_POSITIONS = "recent_sex_positions"
+        const val RECENT_SEX_POSITION_FAMILIES = "recent_sex_position_families"
         const val RECENT_CHALLENGE_IDS = "recent_challenge_ids"
         const val COUNTDOWN_CHALLENGE_ID = "countdown_challenge_id"
         const val COUNTDOWN_INITIAL_SEC = "countdown_initial_sec"
@@ -48,8 +50,19 @@ class PreferencesRepository(context: Context) {
         const val ALLOW_FANTASY = "allow_fantasy"
         const val ALLOW_SEXUAL_PRACTICES = "allow_sexual_practices"
         const val ALLOWED_SEXUAL_PRACTICES = "allowed_sexual_practices"
+        const val PREFERRED_SEXUAL_PRACTICES = "preferred_sexual_practices"
+        const val REJECTED_CHALLENGE_IDS = "rejected_challenge_ids"
         const val ALLOW_STANDING_SEX_POSITIONS = "allow_standing_sex_positions"
+        const val SOUND_ENABLED = "sound_enabled"
+        const val HAPTICS_ENABLED = "haptics_enabled"
         const val ONBOARDING_COMPLETED = "onboarding_completed"
+        const val STATS_GAMES_STARTED = "stats_games_started"
+        const val STATS_GAMES_COMPLETED = "stats_games_completed"
+        const val STATS_TOWERS_FALLEN = "stats_towers_fallen"
+        const val STATS_BLOCKS_PLACED = "stats_blocks_placed"
+        const val STATS_JOKERS_USED = "stats_jokers_used"
+        const val STATS_REJECTED = "stats_rejected"
+        const val STATS_FREE_PLAY_DRAWS = "stats_free_play_draws"
         const val ONBOARDING_PAGE = "onboarding_page"
     }
 
@@ -58,6 +71,9 @@ class PreferencesRepository(context: Context) {
 
     private val _settingsFlow = MutableStateFlow(readSettings())
     val settingsFlow: StateFlow<AppSettings> = _settingsFlow.asStateFlow()
+
+    private val _statsFlow = MutableStateFlow(readStats())
+    val statsFlow: StateFlow<LifetimeStats> = _statsFlow.asStateFlow()
 
     private fun readGame(): GameState {
         val oldCount = prefs.getInt(Keys.BLOCKS_PLACED, 0)
@@ -88,6 +104,7 @@ class PreferencesRepository(context: Context) {
             sexualReceiverIndex = prefs.takeIf { it.contains(Keys.SEXUAL_RECEIVER) }?.getInt(Keys.SEXUAL_RECEIVER, 1),
             recentSexualPractices = decodeList(prefs.getString(Keys.RECENT_SEXUAL_PRACTICES, null)),
             recentSexPositionIds = decodeList(prefs.getString(Keys.RECENT_SEX_POSITIONS, null)),
+            recentSexPositionFamilies = decodeList(prefs.getString(Keys.RECENT_SEX_POSITION_FAMILIES, null)),
             recentChallengeIds = decodeList(prefs.getString(Keys.RECENT_CHALLENGE_IDS, null)),
             countdownChallengeId = prefs.getString(Keys.COUNTDOWN_CHALLENGE_ID, null),
             countdownInitialSec = prefs.getInt(Keys.COUNTDOWN_INITIAL_SEC, 0),
@@ -107,17 +124,37 @@ class PreferencesRepository(context: Context) {
             ?.toSet()
             ?: SexualPractice.playable.toSet()
 
+        val preferred = prefs.getStringSet(Keys.PREFERRED_SEXUAL_PRACTICES, null)
+            ?.mapNotNull(SexualPractice::fromName)
+            ?.filterNot { it == SexualPractice.CHOICE }
+            ?.toSet()
+            .orEmpty()
+
         return AppSettings(
             intensity = Intensity.fromName(prefs.getString(Keys.INTENSITY, null)),
             allowClothing = prefs.getBoolean(Keys.ALLOW_CLOTHING, false),
             allowFantasy = prefs.getBoolean(Keys.ALLOW_FANTASY, true),
             allowSexualPractices = prefs.getBoolean(Keys.ALLOW_SEXUAL_PRACTICES, false),
             allowedSexualPractices = allowed,
+            preferredSexualPractices = preferred intersect allowed,
+            rejectedChallengeIds = prefs.getStringSet(Keys.REJECTED_CHALLENGE_IDS, emptySet())?.toSet().orEmpty(),
             allowStandingSexPositions = prefs.getBoolean(Keys.ALLOW_STANDING_SEX_POSITIONS, true),
+            soundEnabled = prefs.getBoolean(Keys.SOUND_ENABLED, true),
+            hapticsEnabled = prefs.getBoolean(Keys.HAPTICS_ENABLED, true),
             onboardingCompleted = prefs.getBoolean(Keys.ONBOARDING_COMPLETED, false),
             onboardingPage = prefs.getInt(Keys.ONBOARDING_PAGE, 0).coerceIn(0, 3),
         )
     }
+
+    private fun readStats(): LifetimeStats = LifetimeStats(
+        gamesStarted = prefs.getInt(Keys.STATS_GAMES_STARTED, 0),
+        gamesCompleted = prefs.getInt(Keys.STATS_GAMES_COMPLETED, 0),
+        towersFallen = prefs.getInt(Keys.STATS_TOWERS_FALLEN, 0),
+        blocksPlaced = prefs.getInt(Keys.STATS_BLOCKS_PLACED, 0),
+        jokersUsed = prefs.getInt(Keys.STATS_JOKERS_USED, 0),
+        rejectedChallenges = prefs.getInt(Keys.STATS_REJECTED, 0),
+        freePlayDraws = prefs.getInt(Keys.STATS_FREE_PLAY_DRAWS, 0),
+    )
 
     suspend fun saveGame(game: GameState) {
         prefs.edit().apply {
@@ -140,6 +177,7 @@ class PreferencesRepository(context: Context) {
             game.sexualReceiverIndex?.let { putInt(Keys.SEXUAL_RECEIVER, it) } ?: remove(Keys.SEXUAL_RECEIVER)
             putString(Keys.RECENT_SEXUAL_PRACTICES, encodeList(game.recentSexualPractices))
             putString(Keys.RECENT_SEX_POSITIONS, encodeList(game.recentSexPositionIds))
+            putString(Keys.RECENT_SEX_POSITION_FAMILIES, encodeList(game.recentSexPositionFamilies))
             putString(Keys.RECENT_CHALLENGE_IDS, encodeList(game.recentChallengeIds))
             game.countdownChallengeId?.let { putString(Keys.COUNTDOWN_CHALLENGE_ID, it) } ?: remove(Keys.COUNTDOWN_CHALLENGE_ID)
             putInt(Keys.COUNTDOWN_INITIAL_SEC, game.countdownInitialSec)
@@ -160,11 +198,28 @@ class PreferencesRepository(context: Context) {
             .putBoolean(Keys.ALLOW_FANTASY, settings.allowFantasy)
             .putBoolean(Keys.ALLOW_SEXUAL_PRACTICES, settings.allowSexualPractices)
             .putStringSet(Keys.ALLOWED_SEXUAL_PRACTICES, settings.allowedSexualPractices.map { it.name }.toSet())
+            .putStringSet(Keys.PREFERRED_SEXUAL_PRACTICES, settings.preferredSexualPractices.map { it.name }.toSet())
+            .putStringSet(Keys.REJECTED_CHALLENGE_IDS, settings.rejectedChallengeIds)
             .putBoolean(Keys.ALLOW_STANDING_SEX_POSITIONS, settings.allowStandingSexPositions)
+            .putBoolean(Keys.SOUND_ENABLED, settings.soundEnabled)
+            .putBoolean(Keys.HAPTICS_ENABLED, settings.hapticsEnabled)
             .putBoolean(Keys.ONBOARDING_COMPLETED, settings.onboardingCompleted)
             .putInt(Keys.ONBOARDING_PAGE, settings.onboardingPage.coerceIn(0, 3))
             .apply()
         _settingsFlow.value = settings
+    }
+
+    suspend fun saveStats(stats: LifetimeStats) {
+        prefs.edit()
+            .putInt(Keys.STATS_GAMES_STARTED, stats.gamesStarted)
+            .putInt(Keys.STATS_GAMES_COMPLETED, stats.gamesCompleted)
+            .putInt(Keys.STATS_TOWERS_FALLEN, stats.towersFallen)
+            .putInt(Keys.STATS_BLOCKS_PLACED, stats.blocksPlaced)
+            .putInt(Keys.STATS_JOKERS_USED, stats.jokersUsed)
+            .putInt(Keys.STATS_REJECTED, stats.rejectedChallenges)
+            .putInt(Keys.STATS_FREE_PLAY_DRAWS, stats.freePlayDraws)
+            .apply()
+        _statsFlow.value = stats
     }
 
     private fun encodeList(values: List<String>): String = values.joinToString("|")
