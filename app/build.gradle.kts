@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.crabscode.towerfortwo"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.crabscode.towerfortwo"
