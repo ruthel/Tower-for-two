@@ -1023,88 +1023,153 @@ private fun LevelProgress(currentLevel: Int, completed: Int) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun SettingsScreen(state: GameUiState, viewModel: TowerViewModel, onBack: () -> Unit, onCustom: () -> Unit) {
-    Scaffold(topBar = { TopAppBar(title = { Text("Paramètres") }, navigationIcon = {
+private fun SettingsScreen(
+    state: GameUiState,
+    viewModel: TowerViewModel,
+    onBack: () -> Unit,
+    onCustom: () -> Unit,
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Paramètres") },
+                navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
                     }
-                }) }) { padding ->
+                },
+            )
+        },
+    ) { padding ->
         LazyColumn(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
-            contentPadding = PaddingValues(bottom = 30.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
-                Text("Intensité maximale", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text("Les niveaux restent progressifs ; ce réglage limite la variante tirée.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Intensity.entries.forEach { intensity ->
-                        FilterChip(selected = state.settings.intensity == intensity, onClick = { viewModel.setIntensity(intensity) }, label = { Text(intensity.label) })
-                    }
-                }
-            }
-            item { SettingSwitch("Autoriser les défis avec retrait de vêtements", state.settings.allowClothing, viewModel::setAllowClothing) }
-            item { SettingSwitch("Questions sur les fantasmes", state.settings.allowFantasy, viewModel::setAllowFantasy) }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SettingSwitch(
-                        "Pratiques sexuelles — mode adulte",
-                        state.settings.allowSexualPractices,
-                        viewModel::setAllowSexualPractices,
-                    )
-                    Text(
-                        "L'app choisit automatiquement la pratique, les rôles, une position compatible et la durée. Fin sexuelle : Sensuel = niveau 10 · Torride = niveaux 9–10 · Très torride = niveaux 8–10.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 12.sp,
-                    )
-                }
-            }
-            if (state.settings.allowSexualPractices) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Pratiques autorisées", fontWeight = FontWeight.Bold)
-                        Text(
-                            "Le genre des joueurs ne détermine jamais les pratiques. Seules les options activées ici peuvent être tirées.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 12.sp,
-                        )
-                        SexualPractice.playable.forEach { practice ->
-                            SettingSwitch(
-                                practice.label,
-                                practice in state.settings.allowedSexualPractices,
-                            ) { enabled -> viewModel.setSexualPracticeAllowed(practice, enabled) }
+                SettingsSection(
+                    title = "Intensité",
+                    subtitle = "Détermine à quel moment commence la fin exclusivement sexuelle.",
+                ) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Intensity.entries.forEach { intensity ->
+                            FilterChip(
+                                selected = state.settings.intensity == intensity,
+                                onClick = { viewModel.setIntensity(intensity) },
+                                label = { Text(intensity.label) },
+                            )
                         }
-                        SettingSwitch(
-                            "Autoriser les positions debout",
-                            state.settings.allowStandingSexPositions,
-                            viewModel::setAllowStandingSexPositions,
-                        )
+                    }
+                    Text(
+                        when (state.settings.intensity) {
+                            Intensity.SENSUEL -> "Final sexuel : niveau 10"
+                            Intensity.TORRIDE -> "Final sexuel : niveaux 9–10"
+                            Intensity.VERY_HOT -> "Final sexuel : niveaux 8–10"
+                        },
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                    )
+                }
+            }
+
+            item {
+                SettingsSection(title = "Préférences") {
+                    SettingSwitch(
+                        "Retrait de vêtements",
+                        state.settings.allowClothing,
+                        viewModel::setAllowClothing,
+                    )
+                    SettingSwitch(
+                        "Questions sur les fantasmes",
+                        state.settings.allowFantasy,
+                        viewModel::setAllowFantasy,
+                    )
+                    SettingSwitch(
+                        "Positions debout",
+                        state.settings.allowStandingSexPositions,
+                        viewModel::setAllowStandingSexPositions,
+                    )
+                }
+            }
+
+            item {
+                SettingsSection(
+                    title = "Pratiques du final",
+                    subtitle = "Au moins une pratique reste toujours active pour éviter de bloquer la partie.",
+                ) {
+                    SexualPractice.playable.forEach { practice ->
+                        val checked = practice in state.settings.allowedSexualPractices
+                        SettingSwitch(practice.label, checked) { enabled ->
+                            viewModel.setSexualPracticeAllowed(practice, enabled)
+                        }
                     }
                 }
             }
-            item { HorizontalDivider() }
+
             item {
-                Button(onClick = onCustom, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = onCustom,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     Icon(Icons.Default.Edit, null)
                     Spacer(Modifier.size(8.dp))
-                    Text("Modifier / créer mes défis")
+                    Text("Mes défis personnalisés")
                 }
             }
+
             item {
-                Text("Vie privée", fontWeight = FontWeight.Bold)
-                Text("Aucun compte, aucun serveur et aucune permission Internet. Les données restent sur l'appareil.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Aucun compte ni serveur. Toutes les données restent sur cet appareil.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                )
             }
         }
     }
 }
 
 @Composable
+private fun SettingsSection(
+    title: String,
+    subtitle: String? = null,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            subtitle?.let {
+                Text(
+                    it,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                )
+            }
+            content()
+        }
+    }
+}
+
+@Composable
 private fun SettingSwitch(title: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text(title, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onChecked)
     }
