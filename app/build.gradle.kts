@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.crabscode.towerfortwo"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.crabscode.towerfortwo"
@@ -44,14 +44,14 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
+    val composeBom = platform("androidx.compose:compose-bom:2025.08.00")
 
     implementation("androidx.core:core-ktx:1.17.0")
-    implementation("androidx.activity:activity-compose:1.13.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
-    implementation("androidx.datastore:datastore-preferences:1.2.1")
-    implementation("androidx.navigation:navigation-compose:2.10.0")
+    implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.2")
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation("androidx.navigation:navigation-compose:2.9.3")
 
     implementation(composeBom)
     androidTestImplementation(composeBom)
