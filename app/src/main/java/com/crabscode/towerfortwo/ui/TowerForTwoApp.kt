@@ -634,22 +634,192 @@ private fun AddChallengeDialog(
 @Composable
 private fun FallenScreen(state: GameUiState, onReplay: () -> Unit, onFreePlay: () -> Unit) {
     val game = state.game
-    val fallen = game.fallenByIndex?.let(game::playerName) ?: "—"
+    val fallenIndex = game.fallenByIndex
+    val fallen = fallenIndex?.let(game::playerName) ?: "—"
+    val chooser = fallenIndex?.let { game.playerName(1 - it) } ?: "l'autre joueur"
+
+    val consequences = listOf(
+        "Retirer un vêtement",
+        "Répondre honnêtement à une vérité très intime",
+        "Donner un massage ou une série de baisers",
+        "Réaliser un défi sensuel choisi par l'autre",
+    )
+
+    var selectedConsequence by remember(fallenIndex) { mutableStateOf<String?>(null) }
+    var consentConfirmed by remember(fallenIndex) { mutableStateOf(false) }
+    var consequenceStarted by remember(fallenIndex) { mutableStateOf(false) }
+    var consequenceFinished by remember(fallenIndex) { mutableStateOf(false) }
+    var remaining by remember(fallenIndex) { mutableIntStateOf(180) }
+
+    LaunchedEffect(consequenceStarted, consequenceFinished, remaining) {
+        if (consequenceStarted && !consequenceFinished && remaining > 0) {
+            delay(1_000)
+            remaining -= 1
+        } else if (consequenceStarted && remaining <= 0) {
+            consequenceFinished = true
+        }
+    }
+
     Scaffold { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
+            contentPadding = PaddingValues(top = 28.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("LA TOUR EST TOMBÉE !", fontSize = 30.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(28.dp))
-            ResultLine("Niveau atteint", "${game.reachedLevel}")
-            ResultLine("Blocs replacés", "${game.blocksPlaced}")
-            ResultLine("Tour tombée avec", fallen)
-            Spacer(Modifier.height(32.dp))
-            Button(onClick = onReplay, modifier = Modifier.fillMaxWidth().height(58.dp)) { Text("REJOUER") }
-            Spacer(Modifier.height(10.dp))
-            OutlinedButton(onClick = onFreePlay, enabled = game.blocksPlaced > 0, modifier = Modifier.fillMaxWidth().height(58.dp)) { Text("CONTINUER LIBREMENT") }
+            item {
+                Text(
+                    "LA TOUR EST TOMBÉE !",
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    shape = RoundedCornerShape(24.dp),
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            "$fallen est à la merci de $chooser",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Text(
+                            "Pendant 3 minutes, $chooser choisit un seul défi parmi les quatre options ci-dessous.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            item {
+                ResultLine("Niveau atteint", "${game.reachedLevel}")
+                ResultLine("Blocs replacés", "${game.blocksPlaced}")
+                ResultLine("Tour tombée avec", fallen)
+            }
+
+            item {
+                Text("Choisir une seule conséquence", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+
+            consequences.forEach { consequence ->
+                item {
+                    FilterChip(
+                        selected = selectedConsequence == consequence,
+                        onClick = {
+                            if (!consequenceStarted) {
+                                selectedConsequence = consequence
+                                consentConfirmed = false
+                            }
+                        },
+                        enabled = !consequenceStarted,
+                        label = {
+                            Text(
+                                consequence,
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    shape = RoundedCornerShape(20.dp),
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(
+                            "Règle",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            "Un seul défi, accepté par les deux avant de lancer le chrono. Une fois lancé, le choix est verrouillé : pas de changement de défi. Chacun peut toutefois arrêter à tout moment.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        FilterChip(
+                            selected = consentConfirmed,
+                            onClick = {
+                                if (!consequenceStarted) consentConfirmed = !consentConfirmed
+                            },
+                            enabled = !consequenceStarted && selectedConsequence != null,
+                            label = { Text("Nous sommes tous les deux d'accord") },
+                        )
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (consequenceStarted) MaterialTheme.colorScheme.secondaryContainer
+                        else MaterialTheme.colorScheme.surface
+                    ),
+                    shape = RoundedCornerShape(24.dp),
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            if (consequenceFinished) "TEMPS ÉCOULÉ" else formatCountdown(remaining),
+                            fontSize = 44.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        selectedConsequence?.let {
+                            Text(it, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold)
+                        }
+
+                        if (!consequenceStarted) {
+                            Button(
+                                onClick = {
+                                    consequenceStarted = true
+                                    remaining = 180
+                                },
+                                enabled = selectedConsequence != null && consentConfirmed,
+                                modifier = Modifier.fillMaxWidth().height(58.dp),
+                            ) {
+                                Text("VALIDER ET LANCER 3:00")
+                            }
+                        } else if (!consequenceFinished) {
+                            OutlinedButton(
+                                onClick = { consequenceFinished = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("ARRÊTER")
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                Button(
+                    onClick = onReplay,
+                    enabled = !consequenceStarted || consequenceFinished,
+                    modifier = Modifier.fillMaxWidth().height(58.dp),
+                ) { Text("REJOUER") }
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = onFreePlay,
+                    enabled = game.blocksPlaced > 0 && (!consequenceStarted || consequenceFinished),
+                    modifier = Modifier.fillMaxWidth().height(58.dp),
+                ) { Text("CONTINUER LIBREMENT") }
+            }
         }
     }
 }
