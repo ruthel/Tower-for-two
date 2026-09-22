@@ -180,6 +180,7 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
                 onNextFloor = viewModel::nextFloor,
                 onJoker = viewModel::useJoker,
                 onRerollSexPosition = viewModel::rerollSexPosition,
+                onPersistCountdown = viewModel::persistCountdown,
                 onSettings = {
                     navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
                 },
@@ -792,6 +793,7 @@ private fun GameScreen(
     onNextFloor: () -> Unit,
     onJoker: () -> Unit,
     onRerollSexPosition: () -> Unit,
+    onPersistCountdown: (String, Int, Int, Boolean) -> Unit,
     onSettings: () -> Unit,
     onCustom: () -> Unit,
     onPlayers: () -> Unit,
@@ -1029,6 +1031,8 @@ private fun GameScreen(
                             settings = state.settings,
                             resolvedSexualAction = game.resolvedSexualAction(),
                             onRerollSexPosition = onRerollSexPosition,
+                            countdownGame = game,
+                            onPersistCountdown = onPersistCountdown,
                         )
                     }
 
@@ -1207,6 +1211,8 @@ private fun ChallengeCard(
     settings: AppSettings,
     resolvedSexualAction: ResolvedSexualAction? = null,
     onRerollSexPosition: (() -> Unit)? = null,
+    countdownGame: GameState? = null,
+    onPersistCountdown: ((String, Int, Int, Boolean) -> Unit)? = null,
 ) {
     val action = challenge.type == ChallengeType.ACTION
     val container = if (action) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
@@ -1267,6 +1273,8 @@ private fun ChallengeCard(
                     challengeId = challenge.id,
                     text = challenge.text,
                     durationOverrideSec = effectiveResolved?.durationSec,
+                    game = countdownGame,
+                    onPersistCountdown = onPersistCountdown,
                 )
             }
         }
@@ -1278,14 +1286,37 @@ private fun ActionCountdown(
     challengeId: String,
     text: String,
     durationOverrideSec: Int? = null,
+    game: GameState? = null,
+    onPersistCountdown: ((String, Int, Int, Boolean) -> Unit)? = null,
 ) {
     val haptic = LocalHapticFeedback.current
     val initialSeconds = remember(challengeId, text, durationOverrideSec) {
         durationOverrideSec ?: actionDurationSeconds(text)
     }
-    var remaining by remember(challengeId, initialSeconds) { mutableIntStateOf(initialSeconds) }
-    var running by remember(challengeId, initialSeconds) { mutableStateOf(false) }
-    var endFeedbackSent by remember(challengeId, initialSeconds) { mutableStateOf(false) }
+
+    val savedMatches = game?.countdownChallengeId == challengeId &&
+        game.countdownInitialSec > 0
+    val restoredRemaining = if (savedMatches) {
+        game!!.countdownRemainingSec.coerceIn(0, initialSeconds)
+    } else {
+        initialSeconds
+    }
+    val restoredRunning = savedMatches && game!!.countdownRunning && restoredRemaining > 0
+
+    var remaining by remember(challengeId) { mutableIntStateOf(restoredRemaining) }
+    var running by remember(challengeId) { mutableStateOf(restoredRunning) }
+    var endFeedbackSent by remember(challengeId) {
+        mutableStateOf(savedMatches && restoredRemaining <= 0)
+    }
+
+    LaunchedEffect(challengeId, remaining, running, initialSeconds) {
+        onPersistCountdown?.invoke(
+            challengeId,
+            initialSeconds,
+            remaining,
+            running,
+        )
+    }
 
     LaunchedEffect(running, remaining, challengeId) {
         if (running && remaining > 0) {
@@ -1357,6 +1388,7 @@ private fun ActionCountdown(
                     }
                 )
             }
+
             OutlinedButton(
                 onClick = {
                     running = false

@@ -160,6 +160,10 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             sexualGiverIndex = null,
             sexualReceiverIndex = null,
             recentChallengeIds = (game.recentChallengeIds + challenge.id).takeLast(50),
+            countdownChallengeId = null,
+            countdownInitialSec = 0,
+            countdownRemainingSec = 0,
+            countdownRunning = false,
             isInProgress = !finished,
             isFinished = finished,
         )
@@ -183,6 +187,34 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         if (level < 10) return (level + 1) to 1
         val remaining = (1..3).firstOrNull { "10:$it" !in placed }
         return 10 to (remaining ?: 3)
+    }
+
+    fun persistCountdown(
+        challengeId: String,
+        initialSeconds: Int,
+        remainingSeconds: Int,
+        running: Boolean,
+    ) {
+        val game = _uiState.value.game
+        if (game.currentChallengeId != challengeId) return
+
+        val safeInitial = initialSeconds.coerceAtLeast(1)
+        val safeRemaining = remainingSeconds.coerceIn(0, safeInitial)
+        val updated = game.copy(
+            countdownChallengeId = challengeId,
+            countdownInitialSec = safeInitial,
+            countdownRemainingSec = safeRemaining,
+            countdownRunning = running && safeRemaining > 0,
+        )
+
+        if (
+            updated.countdownChallengeId == game.countdownChallengeId &&
+            updated.countdownInitialSec == game.countdownInitialSec &&
+            updated.countdownRemainingSec == game.countdownRemainingSec &&
+            updated.countdownRunning == game.countdownRunning
+        ) return
+
+        viewModelScope.launch { preferences.saveGame(updated) }
     }
 
     fun rerollSexPosition() {
@@ -229,6 +261,10 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             sexualGiverIndex = null,
             sexualReceiverIndex = null,
             recentChallengeIds = (state.game.recentChallengeIds + replacement.id).takeLast(50),
+            countdownChallengeId = null,
+            countdownInitialSec = 0,
+            countdownRemainingSec = 0,
+            countdownRunning = false,
         )
         updated = applyResolvedAction(updated, resolved)
         viewModelScope.launch { preferences.saveGame(updated) }

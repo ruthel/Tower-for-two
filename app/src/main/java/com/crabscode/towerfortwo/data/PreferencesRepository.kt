@@ -36,6 +36,10 @@ class PreferencesRepository(context: Context) {
         const val RECENT_SEXUAL_PRACTICES = "recent_sexual_practices"
         const val RECENT_SEX_POSITIONS = "recent_sex_positions"
         const val RECENT_CHALLENGE_IDS = "recent_challenge_ids"
+        const val COUNTDOWN_CHALLENGE_ID = "countdown_challenge_id"
+        const val COUNTDOWN_INITIAL_SEC = "countdown_initial_sec"
+        const val COUNTDOWN_REMAINING_SEC = "countdown_remaining_sec"
+        const val COUNTDOWN_RUNNING = "countdown_running"
         const val FALLEN_BY = "fallen_by"
         const val IN_PROGRESS = "in_progress"
         const val FINISHED = "finished"
@@ -85,6 +89,10 @@ class PreferencesRepository(context: Context) {
             recentSexualPractices = decodeList(prefs.getString(Keys.RECENT_SEXUAL_PRACTICES, null)),
             recentSexPositionIds = decodeList(prefs.getString(Keys.RECENT_SEX_POSITIONS, null)),
             recentChallengeIds = decodeList(prefs.getString(Keys.RECENT_CHALLENGE_IDS, null)),
+            countdownChallengeId = prefs.getString(Keys.COUNTDOWN_CHALLENGE_ID, null),
+            countdownInitialSec = prefs.getInt(Keys.COUNTDOWN_INITIAL_SEC, 0),
+            countdownRemainingSec = prefs.getInt(Keys.COUNTDOWN_REMAINING_SEC, 0),
+            countdownRunning = prefs.getBoolean(Keys.COUNTDOWN_RUNNING, false),
             fallenByIndex = prefs.takeIf { it.contains(Keys.FALLEN_BY) }?.getInt(Keys.FALLEN_BY, 0),
             isInProgress = prefs.getBoolean(Keys.IN_PROGRESS, false),
             isFinished = prefs.getBoolean(Keys.FINISHED, false),
@@ -133,6 +141,10 @@ class PreferencesRepository(context: Context) {
             putString(Keys.RECENT_SEXUAL_PRACTICES, encodeList(game.recentSexualPractices))
             putString(Keys.RECENT_SEX_POSITIONS, encodeList(game.recentSexPositionIds))
             putString(Keys.RECENT_CHALLENGE_IDS, encodeList(game.recentChallengeIds))
+            game.countdownChallengeId?.let { putString(Keys.COUNTDOWN_CHALLENGE_ID, it) } ?: remove(Keys.COUNTDOWN_CHALLENGE_ID)
+            putInt(Keys.COUNTDOWN_INITIAL_SEC, game.countdownInitialSec)
+            putInt(Keys.COUNTDOWN_REMAINING_SEC, game.countdownRemainingSec)
+            putBoolean(Keys.COUNTDOWN_RUNNING, game.countdownRunning)
             game.fallenByIndex?.let { putInt(Keys.FALLEN_BY, it) } ?: remove(Keys.FALLEN_BY)
             putBoolean(Keys.IN_PROGRESS, game.isInProgress)
             putBoolean(Keys.FINISHED, game.isFinished)
