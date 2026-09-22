@@ -1404,6 +1404,8 @@ private fun ActionCountdown(
     durationOverrideSec: Int? = null,
     game: GameState? = null,
     onPersistCountdown: ((String, Int, Int, Boolean) -> Unit)? = null,
+    hapticsEnabled: Boolean = true,
+    soundEnabled: Boolean = true,
 ) {
     val haptic = LocalHapticFeedback.current
     val initialSeconds = remember(challengeId, text, durationOverrideSec) {
@@ -1442,9 +1444,12 @@ private fun ActionCountdown(
             running = false
             if (!endFeedbackSent) {
                 endFeedbackSent = true
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                delay(120)
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                if (hapticsEnabled) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    delay(120)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+                playUiTone(soundEnabled, ToneGenerator.TONE_PROP_BEEP)
             }
         }
     }
@@ -1483,7 +1488,10 @@ private fun ActionCountdown(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    if (hapticsEnabled) {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                    playUiTone(soundEnabled)
                     when {
                         remaining <= 0 -> {
                             remaining = initialSeconds
