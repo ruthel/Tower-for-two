@@ -1,6 +1,7 @@
 package com.crabscode.towerfortwo.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.crabscode.towerfortwo.model.AppSettings
 import com.crabscode.towerfortwo.model.Challenge
 import com.crabscode.towerfortwo.model.ChallengeType
@@ -16,6 +17,12 @@ import java.util.UUID
 
 class ChallengeRepository(private val context: Context) {
     private val customFile = File(context.filesDir, "custom_challenges.json")
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences("tower_for_two", Context.MODE_PRIVATE)
+
+    private companion object {
+        const val CUSTOM_CHALLENGES_JSON = "custom_challenges_json"
+    }
 
     suspend fun loadAll(): List<Challenge> = withContext(Dispatchers.IO) {
         val builtIns = context.assets.open("challenges.json").bufferedReader().use { parse(it.readText(), false) }
@@ -23,7 +30,20 @@ class ChallengeRepository(private val context: Context) {
     }
 
     suspend fun loadCustom(): List<Challenge> = withContext(Dispatchers.IO) {
-        if (!customFile.exists()) emptyList() else parse(customFile.readText(), true)
+        val stored = prefs.getString(CUSTOM_CHALLENGES_JSON, null)
+        if (stored != null) {
+            return@withContext parse(stored, true)
+        }
+
+        // One-time migration from older app versions that used an internal JSON file.
+        if (customFile.exists()) {
+            val legacy = customFile.readText()
+            prefs.edit().putString(CUSTOM_CHALLENGES_JSON, legacy).apply()
+            customFile.delete()
+            return@withContext parse(legacy, true)
+        }
+
+        emptyList()
     }
 
     suspend fun addCustom(
@@ -164,6 +184,7 @@ class ChallengeRepository(private val context: Context) {
                 put("custom", true)
             })
         }
-        customFile.writeText(array.toString(2))
+        prefs.edit().putString(CUSTOM_CHALLENGES_JSON, array.toString(2)).apply()
+        if (customFile.exists()) customFile.delete()
     }
 }

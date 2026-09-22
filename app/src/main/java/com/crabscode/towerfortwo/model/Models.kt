@@ -94,6 +94,7 @@ data class GameState(
     val player2: String = "Joueur 2",
     val player1Gender: PlayerGender = PlayerGender.NON_PRECISE,
     val player2Gender: PlayerGender = PlayerGender.NON_PRECISE,
+    val playerSetupValidated: Boolean = false,
     val currentPlayerIndex: Int = 0,
     val blocksPlaced: Int = 0,
     val targetLevel: Int = 1,
@@ -168,6 +169,8 @@ data class AppSettings(
     val allowSexualPractices: Boolean = false,
     val allowedSexualPractices: Set<SexualPractice> = SexualPractice.playable.toSet(),
     val allowStandingSexPositions: Boolean = true,
+    val onboardingCompleted: Boolean = false,
+    val onboardingPage: Int = 0,
 ) {
     val sexualFinalStartLevel: Int
         get() = when (intensity) {

@@ -20,6 +20,7 @@ class PreferencesRepository(context: Context) {
         const val PLAYER_2 = "player_2"
         const val PLAYER_1_GENDER = "player_1_gender"
         const val PLAYER_2_GENDER = "player_2_gender"
+        const val PLAYER_SETUP_VALIDATED = "player_setup_validated"
         const val CURRENT_PLAYER = "current_player"
         const val BLOCKS_PLACED = "blocks_placed"
         const val TARGET_LEVEL = "target_level"
@@ -44,6 +45,8 @@ class PreferencesRepository(context: Context) {
         const val ALLOW_SEXUAL_PRACTICES = "allow_sexual_practices"
         const val ALLOWED_SEXUAL_PRACTICES = "allowed_sexual_practices"
         const val ALLOW_STANDING_SEX_POSITIONS = "allow_standing_sex_positions"
+        const val ONBOARDING_COMPLETED = "onboarding_completed"
+        const val ONBOARDING_PAGE = "onboarding_page"
     }
 
     private val _gameFlow = MutableStateFlow(readGame())
@@ -66,6 +69,7 @@ class PreferencesRepository(context: Context) {
             player2 = prefs.getString(Keys.PLAYER_2, "Joueur 2") ?: "Joueur 2",
             player1Gender = PlayerGender.fromName(prefs.getString(Keys.PLAYER_1_GENDER, null)),
             player2Gender = PlayerGender.fromName(prefs.getString(Keys.PLAYER_2_GENDER, null)),
+            playerSetupValidated = prefs.getBoolean(Keys.PLAYER_SETUP_VALIDATED, false),
             currentPlayerIndex = prefs.getInt(Keys.CURRENT_PLAYER, 0),
             blocksPlaced = migratedPositions.size,
             targetLevel = prefs.getInt(Keys.TARGET_LEVEL, fallbackLevel),
@@ -102,6 +106,8 @@ class PreferencesRepository(context: Context) {
             allowSexualPractices = prefs.getBoolean(Keys.ALLOW_SEXUAL_PRACTICES, false),
             allowedSexualPractices = allowed,
             allowStandingSexPositions = prefs.getBoolean(Keys.ALLOW_STANDING_SEX_POSITIONS, true),
+            onboardingCompleted = prefs.getBoolean(Keys.ONBOARDING_COMPLETED, false),
+            onboardingPage = prefs.getInt(Keys.ONBOARDING_PAGE, 0).coerceIn(0, 3),
         )
     }
 
@@ -111,6 +117,7 @@ class PreferencesRepository(context: Context) {
             putString(Keys.PLAYER_2, game.player2)
             putString(Keys.PLAYER_1_GENDER, game.player1Gender.name)
             putString(Keys.PLAYER_2_GENDER, game.player2Gender.name)
+            putBoolean(Keys.PLAYER_SETUP_VALIDATED, game.playerSetupValidated)
             putInt(Keys.CURRENT_PLAYER, game.currentPlayerIndex)
             putInt(Keys.BLOCKS_PLACED, game.blocksPlaced)
             putInt(Keys.TARGET_LEVEL, game.targetLevel)
@@ -142,6 +149,8 @@ class PreferencesRepository(context: Context) {
             .putBoolean(Keys.ALLOW_SEXUAL_PRACTICES, settings.allowSexualPractices)
             .putStringSet(Keys.ALLOWED_SEXUAL_PRACTICES, settings.allowedSexualPractices.map { it.name }.toSet())
             .putBoolean(Keys.ALLOW_STANDING_SEX_POSITIONS, settings.allowStandingSexPositions)
+            .putBoolean(Keys.ONBOARDING_COMPLETED, settings.onboardingCompleted)
+            .putInt(Keys.ONBOARDING_PAGE, settings.onboardingPage.coerceIn(0, 3))
             .apply()
         _settingsFlow.value = settings
     }

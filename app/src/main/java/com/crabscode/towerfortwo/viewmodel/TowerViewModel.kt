@@ -64,6 +64,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
                 player2 = player2.trim().ifBlank { "Joueur 2" },
                 player1Gender = player1Gender,
                 player2Gender = player2Gender,
+                playerSetupValidated = true,
                 currentPlayerIndex = 0,
                 blocksPlaced = 0,
                 targetLevel = 1,
@@ -77,6 +78,44 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(freePlayChallenge = null) }
             preferences.saveGame(game)
         }
+    }
+
+    fun savePlayerSetup(
+        player1: String,
+        player1Gender: PlayerGender,
+        player2: String,
+        player2Gender: PlayerGender,
+        validated: Boolean,
+    ) {
+        val current = _uiState.value.game
+        viewModelScope.launch {
+            preferences.saveGame(
+                current.copy(
+                    player1 = player1.trim().ifBlank { "Joueur 1" },
+                    player2 = player2.trim().ifBlank { "Joueur 2" },
+                    player1Gender = player1Gender,
+                    player2Gender = player2Gender,
+                    playerSetupValidated = validated,
+                )
+            )
+        }
+    }
+
+    fun setOnboardingPage(page: Int) {
+        updateSettings(
+            _uiState.value.settings.copy(
+                onboardingPage = page.coerceIn(0, 3),
+            )
+        )
+    }
+
+    fun completeOnboarding() {
+        updateSettings(
+            _uiState.value.settings.copy(
+                onboardingCompleted = true,
+                onboardingPage = 3,
+            )
+        )
     }
 
     fun placeBlock() {
