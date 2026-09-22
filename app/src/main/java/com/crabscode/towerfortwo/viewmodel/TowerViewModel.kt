@@ -450,6 +450,14 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    fun resetRejectedChallenges() {
+        updateSettings(_uiState.value.settings.copy(rejectedChallengeIds = emptySet()))
+    }
+
+    fun resetStats() {
+        viewModelScope.launch { preferences.saveStats(LifetimeStats()) }
+    }
+
     private fun updateSettings(settings: AppSettings) {
         viewModelScope.launch { preferences.saveSettings(settings) }
     }
