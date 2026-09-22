@@ -1,0 +1,1 @@
+# Tower for Two currently needs no custom shrinking rules.

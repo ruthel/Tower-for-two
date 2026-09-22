@@ -1,0 +1,570 @@
+package com.crabscode.towerfortwo.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.weight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.crabscode.towerfortwo.model.Challenge
+import com.crabscode.towerfortwo.model.ChallengeType
+import com.crabscode.towerfortwo.model.GameUiState
+import com.crabscode.towerfortwo.model.Intensity
+import com.crabscode.towerfortwo.viewmodel.TowerViewModel
+
+private object Routes {
+    const val HOME = "home"
+    const val GAME = "game"
+    const val SETTINGS = "settings"
+    const val CUSTOM = "custom"
+    const val FALLEN = "fallen"
+    const val FREE = "free"
+}
+
+@Composable
+fun TowerForTwoApp(viewModel: TowerViewModel) {
+    val state by viewModel.uiState.collectAsState()
+    val navController = rememberNavController()
+
+    if (!state.loaded) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    NavHost(navController = navController, startDestination = Routes.HOME) {
+        composable(Routes.HOME) {
+            HomeScreen(
+                state = state,
+                onStart = { p1, p2 ->
+                    viewModel.startNewGame(p1, p2)
+                    navController.navigate(Routes.GAME) { launchSingleTop = true }
+                },
+                onResume = { navController.navigate(Routes.GAME) { launchSingleTop = true } },
+                onSettings = { navController.navigate(Routes.SETTINGS) },
+            )
+        }
+        composable(Routes.GAME) {
+            GameScreen(
+                state = state,
+                onBlockPlaced = viewModel::placeBlock,
+                onJoker = viewModel::useJoker,
+                onSettings = { navController.navigate(Routes.SETTINGS) },
+                onCustom = { navController.navigate(Routes.CUSTOM) },
+                onPlayers = { navController.navigate(Routes.HOME) },
+                onTowerFallen = { player ->
+                    viewModel.markTowerFallen(player)
+                    navController.navigate(Routes.FALLEN)
+                },
+            )
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(state, viewModel, onBack = { navController.popBackStack() }, onCustom = { navController.navigate(Routes.CUSTOM) })
+        }
+        composable(Routes.CUSTOM) {
+            CustomChallengesScreen(state, viewModel, onBack = { navController.popBackStack() })
+        }
+        composable(Routes.FALLEN) {
+            FallenScreen(
+                state = state,
+                onReplay = {
+                    viewModel.replay()
+                    navController.navigate(Routes.GAME) { popUpTo(Routes.HOME); launchSingleTop = true }
+                },
+                onFreePlay = {
+                    viewModel.pickFreePlay()
+                    navController.navigate(Routes.FREE)
+                },
+            )
+        }
+        composable(Routes.FREE) {
+            FreePlayScreen(state, onNext = viewModel::pickFreePlay, onReplay = {
+                viewModel.replay()
+                navController.navigate(Routes.GAME) { popUpTo(Routes.HOME); launchSingleTop = true }
+            })
+        }
+    }
+}
+
+
+@Composable
+private fun HomeScreen(
+    state: GameUiState,
+    onStart: (String, String) -> Unit,
+    onResume: () -> Unit,
+    onSettings: () -> Unit,
+) {
+    var p1 by remember(state.game.player1) { mutableStateOf(if (state.game.player1 == "Joueur 1") "" else state.game.player1) }
+    var p2 by remember(state.game.player2) { mutableStateOf(if (state.game.player2 == "Joueur 2") "" else state.game.player2) }
+
+    Scaffold { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 24.dp),
+            contentPadding = PaddingValues(top = 48.dp, bottom = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            item {
+                Text("TOWER FOR TWO", fontSize = 32.sp, fontWeight = FontWeight.Black)
+                Text("Une tour. Deux joueurs. Un défi à la fois.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            if (state.game.isInProgress) {
+                item {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("Partie en cours", fontWeight = FontWeight.Bold)
+                            val label = if (state.game.blocksPlaced == 0) "Premier bloc" else "Niveau ${state.game.currentLevel} · Bloc ${state.game.currentSlot}/3"
+                            Text(label)
+                            Button(onClick = onResume, modifier = Modifier.fillMaxWidth()) { Text("CONTINUER LA PARTIE") }
+                        }
+                    }
+                }
+            }
+
+            item { Text("Joueurs", fontWeight = FontWeight.Bold, fontSize = 20.sp) }
+            item {
+                OutlinedTextField(
+                    value = p1,
+                    onValueChange = { p1 = it },
+                    label = { Text("Joueur 1 (facultatif)") },
+                    placeholder = { Text("Joueur 1") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                OutlinedTextField(
+                    value = p2,
+                    onValueChange = { p2 = it },
+                    label = { Text("Joueur 2 (facultatif)") },
+                    placeholder = { Text("Joueur 2") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                Button(
+                    onClick = { onStart(p1, p2) },
+                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                ) { Text(if (state.game.isInProgress) "NOUVELLE PARTIE" else "COMMENCER") }
+            }
+            item {
+                TextButton(onClick = onSettings, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Settings, contentDescription = null)
+                    Spacer(Modifier.size(8.dp))
+                    Text("Paramètres")
+                }
+            }
+            item {
+                Text(
+                    "16 étages au départ · 10 niveaux · 30 blocs replacés · aucun compte · aucune connexion",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GameScreen(
+    state: GameUiState,
+    onBlockPlaced: () -> Unit,
+    onJoker: () -> Unit,
+    onSettings: () -> Unit,
+    onCustom: () -> Unit,
+    onPlayers: () -> Unit,
+    onTowerFallen: (Int) -> Unit,
+) {
+    var menu by remember { mutableStateOf(false) }
+    var fallenDialog by remember { mutableStateOf(false) }
+    val game = state.game
+    val challenge = state.currentChallenge
+    val level = challenge?.level ?: game.nextLevel
+    val slot = challenge?.slot ?: game.nextSlot
+    val actor = game.challengePlayerIndex?.let(game::playerName)
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("NIVEAU $level", fontWeight = FontWeight.Black) },
+                actions = {
+                    Box {
+                        IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "Menu") }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(text = { Text("La tour est tombée") }, onClick = { menu = false; fallenDialog = true })
+                            DropdownMenuItem(text = { Text("Joueurs") }, onClick = { menu = false; onPlayers() })
+                            DropdownMenuItem(text = { Text("Défis personnalisés") }, onClick = { menu = false; onCustom() })
+                            DropdownMenuItem(text = { Text("Paramètres") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { menu = false; onSettings() })
+                        }
+                    }
+                },
+            )
+        },
+        bottomBar = {
+            Column(
+                Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = 18.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (challenge != null) {
+                    OutlinedButton(onClick = onJoker, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Refresh, null)
+                        Spacer(Modifier.size(8.dp))
+                        Text("PASSER / JOKER")
+                    }
+                }
+                Button(
+                    onClick = onBlockPlaced,
+                    enabled = game.isInProgress && game.blocksPlaced < 30,
+                    modifier = Modifier.fillMaxWidth().height(68.dp),
+                ) {
+                    Text(if (game.blocksPlaced >= 30) "PARTIE TERMINÉE" else "BLOC POSÉ", fontSize = 20.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        },
+    ) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text("Étage ${16 + level} — Bloc $slot/3", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LevelProgress(currentLevel = level, completed = game.blocksPlaced / 3)
+
+            if (challenge == null) {
+                Card(modifier = Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(28.dp)) {
+                    Column(
+                        Modifier.fillMaxSize().padding(28.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text("Au tour de ${game.playerName(game.currentPlayerIndex)}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(18.dp))
+                        Text("Posez le premier bloc au-dessus de la tour, puis appuyez sur BLOC POSÉ.", textAlign = TextAlign.Center, fontSize = 24.sp, lineHeight = 32.sp)
+                    }
+                }
+            } else {
+                ChallengeCard(challenge = challenge, actor = actor)
+                Text(
+                    "Au tour de ${game.playerName(game.currentPlayerIndex)} pour le prochain bloc",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+
+    if (fallenDialog) {
+        AlertDialog(
+            onDismissRequest = { fallenDialog = false },
+            title = { Text("Qui a fait tomber la tour ?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(onClick = { fallenDialog = false; onTowerFallen(0) }, modifier = Modifier.fillMaxWidth()) { Text(game.player1) }
+                    Button(onClick = { fallenDialog = false; onTowerFallen(1) }, modifier = Modifier.fillMaxWidth()) { Text(game.player2) }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { fallenDialog = false }) { Text("Annuler") } },
+        )
+    }
+}
+
+@Composable
+private fun ChallengeCard(challenge: Challenge, actor: String?) {
+    val action = challenge.type == ChallengeType.ACTION
+    val container = if (action) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = container),
+    ) {
+        Column(Modifier.padding(26.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            if (actor != null) Text("Pour $actor", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(if (action) "ACTION" else "VÉRITÉ", fontSize = 18.sp, fontWeight = FontWeight.Black, color = if (action) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary)
+            Text(challenge.text, fontSize = 27.sp, lineHeight = 36.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
+private fun LevelProgress(currentLevel: Int, completed: Int) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        items((1..10).toList()) { n ->
+            val isComplete = n <= completed
+            val isCurrent = n == currentLevel
+            Surface(
+                shape = CircleShape,
+                color = when {
+                    isCurrent -> MaterialTheme.colorScheme.primary
+                    isComplete -> MaterialTheme.colorScheme.secondaryContainer
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                },
+                modifier = Modifier.size(31.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (isComplete && !isCurrent) Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
+                    else Text("$n", fontSize = 12.sp, fontWeight = if (isCurrent) FontWeight.Black else FontWeight.Normal, color = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsScreen(state: GameUiState, viewModel: TowerViewModel, onBack: () -> Unit, onCustom: () -> Unit) {
+    Scaffold(topBar = { TopAppBar(title = { Text("Paramètres") }, navigationIcon = { TextButton(onClick = onBack) { Text("Retour") } }) }) { padding ->
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
+            contentPadding = PaddingValues(bottom = 30.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            item {
+                Text("Intensité maximale", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("Les niveaux restent progressifs ; ce réglage limite la variante tirée.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Intensity.entries.forEach { intensity ->
+                        FilterChip(selected = state.settings.intensity == intensity, onClick = { viewModel.setIntensity(intensity) }, label = { Text(intensity.label) })
+                    }
+                }
+            }
+            item { SettingSwitch("Autoriser les défis avec retrait de vêtements", state.settings.allowClothing, viewModel::setAllowClothing) }
+            item { SettingSwitch("Questions sur les fantasmes", state.settings.allowFantasy, viewModel::setAllowFantasy) }
+            item { HorizontalDivider() }
+            item {
+                Button(onClick = onCustom, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Edit, null)
+                    Spacer(Modifier.size(8.dp))
+                    Text("Modifier / créer mes défis")
+                }
+            }
+            item {
+                Text("Vie privée", fontWeight = FontWeight.Bold)
+                Text("Aucun compte, aucun serveur et aucune permission Internet. Les données restent sur l'appareil.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingSwitch(title: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(title, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChecked)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomChallengesScreen(state: GameUiState, viewModel: TowerViewModel, onBack: () -> Unit) {
+    var addDialog by remember { mutableStateOf(false) }
+    var editTarget by remember { mutableStateOf<Challenge?>(null) }
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Mes défis") }, navigationIcon = { TextButton(onClick = onBack) { Text("Retour") } }, actions = { IconButton(onClick = { addDialog = true }) { Icon(Icons.Default.Add, "Ajouter") } }) },
+        floatingActionButton = { Button(onClick = { addDialog = true }) { Icon(Icons.Default.Add, null); Spacer(Modifier.size(6.dp)); Text("Ajouter") } },
+    ) { padding ->
+        if (state.customChallenges.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(padding).padding(24.dp), contentAlignment = Alignment.Center) {
+                Text("Aucun défi personnalisé. Ajoute tes propres actions ou vérités à n'importe quelle case.", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(state.customChallenges, key = { it.id }) { challenge ->
+                    Card {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Niveau ${challenge.level} · Bloc ${challenge.slot} · ${if (challenge.type == ChallengeType.ACTION) "ACTION" else "VÉRITÉ"}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                Text(challenge.text)
+                            }
+                            IconButton(onClick = { editTarget = challenge }) { Icon(Icons.Default.Edit, "Modifier") }
+                            IconButton(onClick = { viewModel.deleteCustomChallenge(challenge.id) }) { Icon(Icons.Default.Delete, "Supprimer") }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (addDialog) {
+        AddChallengeDialog(initial = null, onDismiss = { addDialog = false }, onSave = { level, slot, text, intensity, clothing, fantasy ->
+            viewModel.addCustomChallenge(level, slot, text, intensity, clothing, fantasy)
+            addDialog = false
+        })
+    }
+
+    editTarget?.let { target ->
+        AddChallengeDialog(initial = target, onDismiss = { editTarget = null }, onSave = { level, slot, text, intensity, clothing, fantasy ->
+            viewModel.updateCustomChallenge(target.id, level, slot, text, intensity, clothing, fantasy)
+            editTarget = null
+        })
+    }
+}
+
+@Composable
+private fun AddChallengeDialog(
+    initial: Challenge?,
+    onDismiss: () -> Unit,
+    onSave: (Int, Int, String, Intensity, Boolean, Boolean) -> Unit,
+) {
+    var level by remember(initial?.id) { mutableIntStateOf(initial?.level ?: 1) }
+    var slot by remember(initial?.id) { mutableIntStateOf(initial?.slot ?: 1) }
+    var text by remember(initial?.id) { mutableStateOf(initial?.text ?: "") }
+    var intensity by remember(initial?.id) { mutableStateOf(initial?.intensity ?: Intensity.SENSUEL) }
+    var clothing by remember(initial?.id) { mutableStateOf(initial?.clothing ?: false) }
+    var fantasy by remember(initial?.id) { mutableStateOf(initial?.fantasy ?: false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (initial == null) "Nouveau défi" else "Modifier le défi") },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Niveau", modifier = Modifier.weight(1f))
+                        OutlinedButton(onClick = { if (level > 1) level-- }) { Text("−") }
+                        Text("$level", fontWeight = FontWeight.Bold)
+                        OutlinedButton(onClick = { if (level < 10) level++ }) { Text("+") }
+                    }
+                }
+                item {
+                    Text("Case")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        (1..3).forEach { n -> FilterChip(selected = slot == n, onClick = { slot = n }, label = { Text(if (n == 1) "1 Action" else "$n Vérité") }) }
+                    }
+                }
+                item { OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text("Texte du défi") }, modifier = Modifier.fillMaxWidth(), minLines = 3) }
+                item {
+                    Text("Intensité")
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Intensity.entries.forEach { i -> FilterChip(selected = intensity == i, onClick = { intensity = i }, label = { Text(i.label) }) }
+                    }
+                }
+                item { SettingSwitch("Retrait de vêtements", clothing) { clothing = it } }
+                item { SettingSwitch("Fantasme", fantasy) { fantasy = it } }
+            }
+        },
+        confirmButton = { Button(onClick = { onSave(level, slot, text, intensity, clothing, fantasy) }, enabled = text.isNotBlank()) { Text("Enregistrer") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
+    )
+}
+
+@Composable
+private fun FallenScreen(state: GameUiState, onReplay: () -> Unit, onFreePlay: () -> Unit) {
+    val game = state.game
+    val fallen = game.fallenByIndex?.let(game::playerName) ?: "—"
+    Scaffold { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("LA TOUR EST TOMBÉE !", fontSize = 30.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(28.dp))
+            ResultLine("Niveau atteint", "${game.reachedLevel}")
+            ResultLine("Blocs replacés", "${game.blocksPlaced}")
+            ResultLine("Tour tombée avec", fallen)
+            Spacer(Modifier.height(32.dp))
+            Button(onClick = onReplay, modifier = Modifier.fillMaxWidth().height(58.dp)) { Text("REJOUER") }
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(onClick = onFreePlay, enabled = game.blocksPlaced > 0, modifier = Modifier.fillMaxWidth().height(58.dp)) { Text("CONTINUER LIBREMENT") }
+        }
+    }
+}
+
+@Composable
+private fun ResultLine(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun FreePlayScreen(state: GameUiState, onNext: () -> Unit, onReplay: () -> Unit) {
+    val challenge = state.freePlayChallenge
+    Scaffold(bottomBar = {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onNext, modifier = Modifier.fillMaxWidth().height(62.dp)) { Icon(Icons.Default.Refresh, null); Spacer(Modifier.size(8.dp)); Text("AUTRE DÉFI") }
+            TextButton(onClick = onReplay, modifier = Modifier.fillMaxWidth()) { Text("Rejouer depuis le début") }
+        }
+    }) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).padding(20.dp), verticalArrangement = Arrangement.Center) {
+            Text("MODE LIBRE", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black)
+            Text("Uniquement parmi les niveaux déjà débloqués.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(20.dp))
+            if (challenge != null) ChallengeCard(challenge, actor = null) else Text("Appuie sur AUTRE DÉFI pour commencer.")
+        }
+    }
+}

@@ -1,0 +1,38 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: yes | sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.6.0
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.6.0"
+
+      - name: Validate challenge catalog
+        run: python3 validate_challenges.py
+
+      - name: Unit tests
+        run: gradle testDebugUnitTest --stacktrace
+
+      - name: Assemble debug APK
+        run: gradle assembleDebug --stacktrace
