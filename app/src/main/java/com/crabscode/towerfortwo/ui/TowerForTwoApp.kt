@@ -1872,7 +1872,7 @@ private fun SettingsScreen(
 
             item {
                 SettingsSection(
-                    title = "Préférences",
+                    title = "Contenu",
                     subtitle = "Ces choix sont appliqués immédiatement et conservés sur l'appareil.",
                 ) {
                     SettingSwitch(
@@ -1895,17 +1895,93 @@ private fun SettingsScreen(
 
             item {
                 SettingsSection(
-                    title = "Pratiques du final",
-                    subtitle = "Choisis ce que l'application peut proposer. Au moins une pratique reste active.",
+                    title = "Expérience",
+                    subtitle = "Le son reste discret et les vibrations accompagnent les actions importantes.",
                 ) {
-                    SexualPractice.playable.forEach { practice ->
-                        val checked = practice in state.settings.allowedSexualPractices
-                        SettingSwitch(
-                            title = practice.label,
-                            checked = checked,
-                        ) { enabled ->
-                            viewModel.setSexualPracticeAllowed(practice, enabled)
+                    SettingSwitch(
+                        "Sons du jeu",
+                        state.settings.soundEnabled,
+                        viewModel::setSoundEnabled,
+                    )
+                    SettingSwitch(
+                        "Vibrations",
+                        state.settings.hapticsEnabled,
+                        viewModel::setHapticsEnabled,
+                    )
+                }
+            }
+
+            item {
+                SettingsSection(
+                    title = "Pratiques du final",
+                    subtitle = "Active les pratiques possibles et marque tes préférées. Les favoris sont proposés plus souvent, sans devenir obligatoires.",
+                ) {
+                    SexualPractice.playable.forEachIndexed { index, practice ->
+                        val allowed = practice in state.settings.allowedSexualPractices
+                        val preferred = practice in state.settings.preferredSexualPractices
+                        PracticePreferenceRow(
+                            practice = practice,
+                            allowed = allowed,
+                            preferred = preferred,
+                            onAllowedChange = { enabled ->
+                                viewModel.setSexualPracticeAllowed(practice, enabled)
+                            },
+                            onPreferredChange = { enabled ->
+                                viewModel.setSexualPracticePreferred(practice, enabled)
+                            },
+                        )
+                        if (index < SexualPractice.playable.lastIndex) {
+                            HorizontalDivider(
+                                thickness = 1.dp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                            )
                         }
+                    }
+                }
+            }
+
+            item {
+                SettingsSection(
+                    title = "Pas pour nous",
+                    subtitle = "Un défi marqué « Pas pour nous » n'est plus proposé. Tu peux réinitialiser cette liste quand tu veux.",
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            "${state.settings.rejectedChallengeIds.size} défi(s) masqué(s)",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        TextButton(
+                            onClick = viewModel::resetRejectedChallenges,
+                            enabled = state.settings.rejectedChallengeIds.isNotEmpty(),
+                        ) {
+                            Text("RÉINITIALISER")
+                        }
+                    }
+                }
+            }
+
+            item {
+                SettingsSection(
+                    title = "Statistiques",
+                    subtitle = "Ces données restent uniquement sur cet appareil.",
+                ) {
+                    StatLine("Parties lancées", state.stats.gamesStarted)
+                    StatLine("Tours terminées", state.stats.gamesCompleted)
+                    StatLine("Tours tombées", state.stats.towersFallen)
+                    StatLine("Blocs posés", state.stats.blocksPlaced)
+                    StatLine("Jokers utilisés", state.stats.jokersUsed)
+                    StatLine("Défis refusés", state.stats.rejectedChallenges)
+                    StatLine("Tirages mode libre", state.stats.freePlayDraws)
+
+                    TextButton(
+                        onClick = viewModel::resetStats,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("RÉINITIALISER LES STATISTIQUES")
                     }
                 }
             }
@@ -1934,7 +2010,7 @@ private fun SettingsScreen(
                     showDivider = false,
                 ) {
                     Text(
-                        "Joueurs, réglages, progression, historique anti-répétition, onboarding et défis personnalisés sont sauvegardés dans les préférences locales de l'application.",
+                        "Joueurs, réglages, progression, préférences, statistiques, historique anti-répétition, onboarding et défis personnalisés sont sauvegardés dans les préférences locales de l'application.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium,
                         lineHeight = 21.sp,
@@ -1948,6 +2024,64 @@ private fun SettingsScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PracticePreferenceRow(
+    practice: SexualPractice,
+    allowed: Boolean,
+    preferred: Boolean,
+    onAllowedChange: (Boolean) -> Unit,
+    onPreferredChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            practice.label,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        FilterChip(
+            selected = preferred,
+            onClick = { onPreferredChange(!preferred) },
+            enabled = allowed,
+            label = {
+                Text(
+                    if (preferred) "Favori" else "Favori",
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            },
+        )
+        Switch(
+            checked = allowed,
+            onCheckedChange = onAllowedChange,
+        )
+    }
+}
+
+@Composable
+private fun StatLine(label: String, value: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Text(
+            value.toString(),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyLarge,
+        )
     }
 }
 
@@ -2186,9 +2320,12 @@ private fun FinishScreen(
     val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(Unit) {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        delay(120)
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        if (state.settings.hapticsEnabled) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            delay(120)
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+        playUiTone(state.settings.soundEnabled, ToneGenerator.TONE_PROP_BEEP)
     }
 
     Scaffold { padding ->
@@ -2459,7 +2596,12 @@ private fun ResultLine(label: String, value: String) {
 }
 
 @Composable
-private fun FreePlayScreen(state: GameUiState, onNext: () -> Unit, onReplay: () -> Unit) {
+private fun FreePlayScreen(
+    state: GameUiState,
+    onNext: () -> Unit,
+    onReject: () -> Unit,
+    onReplay: () -> Unit,
+) {
     val challenge = state.freePlayChallenge
 
     Scaffold { padding ->
@@ -2483,6 +2625,7 @@ private fun FreePlayScreen(state: GameUiState, onNext: () -> Unit, onReplay: () 
                         actor = null,
                         game = state.game,
                         settings = state.settings,
+                        onReject = onReject,
                     )
                 } else {
                     Surface(
