@@ -1650,14 +1650,37 @@ private fun SexualActionPanel(
     }
 }
 
+private fun sexStickerResource(
+    position: SexPositionSpec,
+    practice: SexualPractice,
+): Int = when (position.sticker) {
+    SexStickerPose.FACE_TO_FACE ->
+        if (practice == SexualPractice.MASTURBATION_MUTUELLE) {
+            R.drawable.sticker_close_cuddle
+        } else {
+            R.drawable.sticker_face_to_face
+        }
+
+    SexStickerPose.SIDE_BY_SIDE -> R.drawable.sticker_reclining
+    SexStickerPose.SPOON -> R.drawable.sticker_spoon
+    SexStickerPose.RECEIVER_LYING -> R.drawable.sticker_reclining
+    SexStickerPose.RECEIVER_SEATED -> R.drawable.sticker_seated_lap
+    SexStickerPose.KNEELING -> R.drawable.sticker_close_cuddle
+    SexStickerPose.PARTNER_ON_TOP -> R.drawable.sticker_legs_wrapped
+    SexStickerPose.SEATED_EMBRACE -> R.drawable.sticker_seated_lap
+
+    SexStickerPose.STANDING_FACE_TO_FACE -> when (practice) {
+        SexualPractice.CARESSES_INTIMES -> R.drawable.sticker_hug_leg_up
+        SexualPractice.PENETRATION -> R.drawable.sticker_legs_wrapped
+        else -> R.drawable.sticker_close_cuddle
+    }
+}
+
 @Composable
 private fun PremiumSexPositionSticker(
     position: SexPositionSpec,
     practice: SexualPractice,
 ) {
-    val paper = Color(0xFFF8F5F7)
-    val ink = Color(0xFF09070A)
-    val outline = Color.White
     val badgeColor = when (practice) {
         SexualPractice.CARESSES_INTIMES -> MaterialTheme.colorScheme.primary
         SexualPractice.MASTURBATION -> MaterialTheme.colorScheme.secondary
@@ -1679,167 +1702,19 @@ private fun PremiumSexPositionSticker(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(184.dp)
+                .height(224.dp)
                 .background(
-                    color = paper,
+                    color = Color(0xFFF7F6F7),
                     shape = RoundedCornerShape(24.dp),
                 ),
         ) {
-            Canvas(
+            Image(
+                painter = painterResource(sexStickerResource(position, practice)),
+                contentDescription = "Illustration ${position.label}",
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 18.dp, vertical = 16.dp),
-            ) {
-                val w = size.width
-                val h = size.height
-
-                fun dot(center: Offset, radius: Float = 17f) {
-                    drawCircle(outline, radius = radius + 5f, center = center)
-                    drawCircle(ink, radius = radius, center = center)
-                }
-
-                fun segment(a: Offset, b: Offset, width: Float = 25f) {
-                    drawLine(outline, a, b, strokeWidth = width + 9f, cap = StrokeCap.Round)
-                    drawLine(ink, a, b, strokeWidth = width, cap = StrokeCap.Round)
-                }
-
-                fun person(
-                    head: Offset,
-                    shoulder: Offset,
-                    hip: Offset,
-                    foot1: Offset,
-                    foot2: Offset,
-                    hand1: Offset,
-                    hand2: Offset,
-                ) {
-                    segment(shoulder, hip)
-                    segment(shoulder, hand1, 22f)
-                    segment(shoulder, hand2, 22f)
-                    segment(hip, foot1, 24f)
-                    segment(hip, foot2, 24f)
-                    dot(head)
-                }
-
-                when (position.sticker) {
-                    SexStickerPose.FACE_TO_FACE -> {
-                        person(
-                            Offset(w*.30f,h*.31f), Offset(w*.33f,h*.46f), Offset(w*.38f,h*.68f),
-                            Offset(w*.25f,h*.84f), Offset(w*.49f,h*.84f),
-                            Offset(w*.48f,h*.54f), Offset(w*.46f,h*.66f)
-                        )
-                        person(
-                            Offset(w*.70f,h*.31f), Offset(w*.67f,h*.46f), Offset(w*.62f,h*.68f),
-                            Offset(w*.51f,h*.84f), Offset(w*.75f,h*.84f),
-                            Offset(w*.52f,h*.54f), Offset(w*.54f,h*.66f)
-                        )
-                    }
-
-                    SexStickerPose.SIDE_BY_SIDE -> {
-                        person(
-                            Offset(w*.18f,h*.42f), Offset(w*.30f,h*.47f), Offset(w*.51f,h*.52f),
-                            Offset(w*.74f,h*.57f), Offset(w*.76f,h*.69f),
-                            Offset(w*.42f,h*.35f), Offset(w*.47f,h*.62f)
-                        )
-                        person(
-                            Offset(w*.22f,h*.67f), Offset(w*.34f,h*.68f), Offset(w*.55f,h*.72f),
-                            Offset(w*.78f,h*.74f), Offset(w*.78f,h*.86f),
-                            Offset(w*.47f,h*.58f), Offset(w*.50f,h*.80f)
-                        )
-                    }
-
-                    SexStickerPose.SPOON -> {
-                        person(
-                            Offset(w*.20f,h*.37f), Offset(w*.32f,h*.43f), Offset(w*.53f,h*.53f),
-                            Offset(w*.76f,h*.64f), Offset(w*.72f,h*.79f),
-                            Offset(w*.43f,h*.34f), Offset(w*.49f,h*.61f)
-                        )
-                        person(
-                            Offset(w*.28f,h*.58f), Offset(w*.40f,h*.60f), Offset(w*.59f,h*.65f),
-                            Offset(w*.79f,h*.72f), Offset(w*.75f,h*.86f),
-                            Offset(w*.50f,h*.50f), Offset(w*.53f,h*.75f)
-                        )
-                    }
-
-                    SexStickerPose.RECEIVER_LYING -> {
-                        person(
-                            Offset(w*.16f,h*.71f), Offset(w*.29f,h*.68f), Offset(w*.55f,h*.70f),
-                            Offset(w*.80f,h*.66f), Offset(w*.80f,h*.81f),
-                            Offset(w*.42f,h*.57f), Offset(w*.43f,h*.79f)
-                        )
-                        person(
-                            Offset(w*.63f,h*.24f), Offset(w*.61f,h*.40f), Offset(w*.57f,h*.60f),
-                            Offset(w*.46f,h*.84f), Offset(w*.67f,h*.84f),
-                            Offset(w*.49f,h*.53f), Offset(w*.70f,h*.52f)
-                        )
-                    }
-
-                    SexStickerPose.RECEIVER_SEATED -> {
-                        person(
-                            Offset(w*.66f,h*.24f), Offset(w*.64f,h*.40f), Offset(w*.62f,h*.62f),
-                            Offset(w*.51f,h*.84f), Offset(w*.75f,h*.84f),
-                            Offset(w*.52f,h*.53f), Offset(w*.73f,h*.50f)
-                        )
-                        person(
-                            Offset(w*.34f,h*.57f), Offset(w*.39f,h*.69f), Offset(w*.46f,h*.79f),
-                            Offset(w*.34f,h*.91f), Offset(w*.56f,h*.91f),
-                            Offset(w*.50f,h*.62f), Offset(w*.52f,h*.75f)
-                        )
-                    }
-
-                    SexStickerPose.KNEELING -> {
-                        person(
-                            Offset(w*.69f,h*.19f), Offset(w*.67f,h*.35f), Offset(w*.66f,h*.59f),
-                            Offset(w*.60f,h*.89f), Offset(w*.74f,h*.89f),
-                            Offset(w*.56f,h*.49f), Offset(w*.77f,h*.49f)
-                        )
-                        person(
-                            Offset(w*.35f,h*.58f), Offset(w*.40f,h*.69f), Offset(w*.47f,h*.80f),
-                            Offset(w*.33f,h*.91f), Offset(w*.57f,h*.91f),
-                            Offset(w*.51f,h*.61f), Offset(w*.52f,h*.75f)
-                        )
-                    }
-
-                    SexStickerPose.PARTNER_ON_TOP -> {
-                        person(
-                            Offset(w*.18f,h*.73f), Offset(w*.31f,h*.69f), Offset(w*.56f,h*.69f),
-                            Offset(w*.80f,h*.67f), Offset(w*.80f,h*.82f),
-                            Offset(w*.44f,h*.57f), Offset(w*.45f,h*.78f)
-                        )
-                        person(
-                            Offset(w*.52f,h*.20f), Offset(w*.53f,h*.36f), Offset(w*.53f,h*.57f),
-                            Offset(w*.40f,h*.79f), Offset(w*.67f,h*.79f),
-                            Offset(w*.41f,h*.49f), Offset(w*.65f,h*.49f)
-                        )
-                    }
-
-                    SexStickerPose.SEATED_EMBRACE -> {
-                        person(
-                            Offset(w*.39f,h*.30f), Offset(w*.41f,h*.45f), Offset(w*.44f,h*.67f),
-                            Offset(w*.31f,h*.84f), Offset(w*.53f,h*.84f),
-                            Offset(w*.56f,h*.50f), Offset(w*.57f,h*.61f)
-                        )
-                        person(
-                            Offset(w*.61f,h*.30f), Offset(w*.59f,h*.45f), Offset(w*.56f,h*.67f),
-                            Offset(w*.47f,h*.84f), Offset(w*.69f,h*.84f),
-                            Offset(w*.44f,h*.50f), Offset(w*.43f,h*.61f)
-                        )
-                        segment(Offset(w*.44f,h*.56f), Offset(w*.56f,h*.56f), 18f)
-                    }
-
-                    SexStickerPose.STANDING_FACE_TO_FACE -> {
-                        person(
-                            Offset(w*.35f,h*.18f), Offset(w*.38f,h*.34f), Offset(w*.40f,h*.60f),
-                            Offset(w*.31f,h*.90f), Offset(w*.49f,h*.90f),
-                            Offset(w*.52f,h*.46f), Offset(w*.51f,h*.59f)
-                        )
-                        person(
-                            Offset(w*.65f,h*.18f), Offset(w*.62f,h*.34f), Offset(w*.60f,h*.60f),
-                            Offset(w*.51f,h*.90f), Offset(w*.69f,h*.90f),
-                            Offset(w*.48f,h*.46f), Offset(w*.49f,h*.59f)
-                        )
-                    }
-                }
-            }
+                    .padding(4.dp),
+            )
 
             Surface(
                 modifier = Modifier
