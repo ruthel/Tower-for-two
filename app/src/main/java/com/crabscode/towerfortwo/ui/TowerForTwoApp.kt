@@ -4,6 +4,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -176,42 +178,70 @@ private fun HomeScreen(
     onResume: () -> Unit,
     onSettings: () -> Unit,
 ) {
-    var p1 by remember(state.game.player1) { mutableStateOf(if (state.game.player1 == "Joueur 1") "" else state.game.player1) }
-    var p2 by remember(state.game.player2) { mutableStateOf(if (state.game.player2 == "Joueur 2") "" else state.game.player2) }
+    var p1 by remember(state.game.player1) {
+        mutableStateOf(if (state.game.player1 == "Joueur 1") "" else state.game.player1)
+    }
+    var p2 by remember(state.game.player2) {
+        mutableStateOf(if (state.game.player2 == "Joueur 2") "" else state.game.player2)
+    }
     var g1 by remember(state.game.player1Gender) { mutableStateOf(state.game.player1Gender) }
     var g2 by remember(state.game.player2Gender) { mutableStateOf(state.game.player2Gender) }
-    var playersValidated by remember(state.game.player1, state.game.player2, state.game.player1Gender, state.game.player2Gender) {
-        mutableStateOf(state.game.isInProgress)
-    }
+    var playersValidated by remember(
+        state.game.player1,
+        state.game.player2,
+        state.game.player1Gender,
+        state.game.player2Gender,
+    ) { mutableStateOf(state.game.isInProgress) }
 
     val displayP1 = p1.trim().ifBlank { "Joueur 1" }
     val displayP2 = p2.trim().ifBlank { "Joueur 2" }
 
     Scaffold { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 24.dp),
-            contentPadding = PaddingValues(top = 48.dp, bottom = 36.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .navigationBarsPadding(),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 28.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             item {
-                Text("TOWER FOR TWO", fontSize = 32.sp, fontWeight = FontWeight.Black)
-                Text("Une tour. Deux joueurs. Un défi à la fois.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("TOWER FOR TWO", fontSize = 29.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        "Une tour · deux joueurs · un défi à la fois",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp,
+                    )
+                }
             }
 
             if (state.game.isInProgress) {
                 item {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("Partie en cours", fontWeight = FontWeight.Bold)
-                            val label = if (state.game.blocksPlaced == 0) "Premier bloc" else "Niveau ${state.game.currentLevel} · Bloc ${state.game.currentSlot}/3"
-                            Text(label)
-                            Button(onClick = onResume, modifier = Modifier.fillMaxWidth()) { Text("CONTINUER LA PARTIE") }
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Partie en cours", fontWeight = FontWeight.Bold)
+                                Text(
+                                    "Niveau ${state.game.currentLevel} · Bloc ${state.game.currentSlot}/3",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 13.sp,
+                                )
+                            }
+                            Button(onClick = onResume) { Text("CONTINUER") }
                         }
                     }
                 }
             }
 
-            item { Text("Joueurs", fontWeight = FontWeight.Bold, fontSize = 20.sp) }
+            item { Text("Joueurs", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
 
             if (!playersValidated) {
                 item {
@@ -236,35 +266,45 @@ private fun HomeScreen(
                     Button(
                         onClick = { playersValidated = true },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
-                    ) { Text("VALIDER LES JOUEURS") }
+                        shape = RoundedCornerShape(18.dp),
+                    ) {
+                        Text("VALIDER LES JOUEURS", fontWeight = FontWeight.Bold)
+                    }
                 }
             } else {
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         PlayerValidatedCard("1", displayP1, g1, Modifier.weight(1f))
                         PlayerValidatedCard("2", displayP2, g2, Modifier.weight(1f))
                     }
                 }
                 item {
-                    OutlinedButton(
-                        onClick = { playersValidated = false },
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Icon(Icons.Default.Edit, null)
-                        Spacer(Modifier.size(8.dp))
-                        Text("MODIFIER LES JOUEURS")
+                        OutlinedButton(
+                            onClick = { playersValidated = false },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(6.dp))
+                            Text("MODIFIER")
+                        }
+                        Button(
+                            onClick = { onStart(displayP1, g1, displayP2, g2) },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(if (state.game.isInProgress) "REJOUER" else "COMMENCER")
+                        }
                     }
                 }
-                item {
-                    Button(
-                        onClick = { onStart(displayP1, g1, displayP2, g2) },
-                        modifier = Modifier.fillMaxWidth().height(60.dp),
-                    ) { Text(if (state.game.isInProgress) "NOUVELLE PARTIE" else "COMMENCER") }
-                }
             }
+
+            item { HorizontalDivider() }
 
             item {
                 TextButton(onClick = onSettings, modifier = Modifier.fillMaxWidth()) {
@@ -273,10 +313,12 @@ private fun HomeScreen(
                     Text("Paramètres")
                 }
             }
+
             item {
                 Text(
-                    "16 étages au départ · 10 niveaux · 30 blocs replacés · aucun compte · aucune connexion",
+                    "16 étages · 10 niveaux · données locales",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -285,6 +327,7 @@ private fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PlayerEditor(
     number: String,
@@ -293,24 +336,64 @@ private fun PlayerEditor(
     gender: PlayerGender,
     onGenderChange: (PlayerGender) -> Unit,
 ) {
-    Card(shape = RoundedCornerShape(22.dp)) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
         Column(
             Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("Joueur $number", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(34.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            number,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+                }
+                Column {
+                    Text("Joueur $number", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text(
+                        "Prénom et genre",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                    )
+                }
+            }
+
             OutlinedTextField(
                 value = name,
                 onValueChange = onNameChange,
-                label = { Text("Prénom (facultatif)") },
-                placeholder = { Text("Joueur $number") },
+                label = { Text("Prénom") },
+                placeholder = { Text("Facultatif") },
                 leadingIcon = { Icon(Icons.Default.Person, null) },
                 singleLine = true,
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Text("Genre", fontWeight = FontWeight.SemiBold)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(PlayerGender.entries) { candidate ->
+
+            Text(
+                "Genre",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                PlayerGender.entries.forEach { candidate ->
                     FilterChip(
                         selected = gender == candidate,
                         onClick = { onGenderChange(candidate) },
@@ -329,27 +412,37 @@ private fun PlayerValidatedCard(
     gender: PlayerGender,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
-        Column(
-            Modifier.fillMaxWidth().padding(18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Row(
+            Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(44.dp),
+                modifier = Modifier.size(38.dp),
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(number, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onPrimary)
+                    Text(
+                        number,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
                 }
             }
-            Text(name, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-            Text(gender.label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(Modifier.weight(1f)) {
+                Text(name, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(
+                    gender.label,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                )
+            }
         }
     }
 }
