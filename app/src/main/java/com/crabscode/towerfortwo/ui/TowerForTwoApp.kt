@@ -376,100 +376,87 @@ private fun GameScreen(
     val slot = challenge?.slot ?: game.nextSlot
     val actor = game.challengePlayerIndex?.let(game::playerName)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("NIVEAU $level", fontWeight = FontWeight.Black) },
-                actions = {
-                    Box {
-                        IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "Menu") }
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            DropdownMenuItem(text = { Text("La tour est tombée") }, onClick = { menu = false; fallenDialog = true })
-                            DropdownMenuItem(text = { Text("Joueurs") }, onClick = { menu = false; onPlayers() })
-                            DropdownMenuItem(text = { Text("Défis personnalisés") }, onClick = { menu = false; onCustom() })
-                            DropdownMenuItem(text = { Text("Paramètres") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { menu = false; onSettings() })
-                        }
-                    }
-                },
-            )
-        },
-        bottomBar = {
-            Column(
-                Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = 18.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (challenge != null) {
-                    OutlinedButton(onClick = onJoker, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Refresh, null)
-                        Spacer(Modifier.size(8.dp))
-                        Text("PASSER / JOKER")
-                    }
-                }
-
-                if (!game.isFinished) {
-                    Text(
-                        "Prochain placement · Étage ${16 + game.targetLevel} · Bloc ${game.targetSlot}/3",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        (1..3).forEach { target ->
-                            FilterChip(
-                                selected = game.targetSlot == target,
-                                onClick = { onSelectSlot(target) },
-                                enabled = !game.isPlaced(game.targetLevel, target),
-                                label = { Text("Bloc $target") },
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
-                    OutlinedButton(
-                        onClick = onNextFloor,
-                        enabled = game.canAdvanceFloor,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("PASSER À L'ÉTAGE SUIVANT")
-                    }
-                    if (!game.hasPlacedOnLevel(game.targetLevel) && game.targetLevel < 10) {
-                        Text(
-                            "Pose au moins 1 bloc à cet étage avant de passer au suivant.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 12.sp,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                }
-
-                Button(
-                    onClick = onBlockPlaced,
-                    enabled = game.isInProgress && !game.isFinished && !game.isPlaced(game.targetLevel, game.targetSlot),
-                    modifier = Modifier.fillMaxWidth().height(68.dp),
-                ) {
-                    Text(
-                        if (game.isFinished) "PARTIE TERMINÉE" else "BLOC ${game.targetSlot} POSÉ",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                }
-            }
-        },
-    ) { padding ->
+    Scaffold { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .navigationBarsPadding()
+                .imePadding(),
+            contentPadding = PaddingValues(
+                start = 18.dp,
+                end = 18.dp,
+                top = 24.dp,
+                bottom = 36.dp,
+            ),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
-                Text("Étage ${16 + level} — Bloc $slot/3", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        "NIVEAU $level",
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Box {
+                        IconButton(onClick = { menu = true }) {
+                            Icon(Icons.Default.MoreVert, "Menu")
+                        }
+                        DropdownMenu(
+                            expanded = menu,
+                            onDismissRequest = { menu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("La tour est tombée") },
+                                onClick = {
+                                    menu = false
+                                    fallenDialog = true
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Joueurs") },
+                                onClick = {
+                                    menu = false
+                                    onPlayers()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Défis personnalisés") },
+                                onClick = {
+                                    menu = false
+                                    onCustom()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Paramètres") },
+                                leadingIcon = { Icon(Icons.Default.Settings, null) },
+                                onClick = {
+                                    menu = false
+                                    onSettings()
+                                },
+                            )
+                        }
+                    }
+                }
             }
+
             item {
-                LevelProgress(currentLevel = game.targetLevel, completed = game.completedLevelCount)
+                Text(
+                    "Étage ${16 + level} — Bloc $slot/3",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 18.sp,
+                )
+            }
+
+            item {
+                LevelProgress(
+                    currentLevel = game.targetLevel,
+                    completed = game.completedLevelCount,
+                )
             }
 
             if (challenge == null) {
@@ -509,12 +496,92 @@ private fun GameScreen(
                         onRerollSexPosition = onRerollSexPosition,
                     )
                 }
+
                 item {
                     Text(
                         "Au tour de ${game.playerName(game.currentPlayerIndex)} pour le prochain bloc",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
+                    )
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = onJoker,
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                    ) {
+                        Icon(Icons.Default.Refresh, null)
+                        Spacer(Modifier.size(8.dp))
+                        Text("PASSER / JOKER")
+                    }
+                }
+            }
+
+            if (!game.isFinished) {
+                item {
+                    Text(
+                        "Prochain placement · Étage ${16 + game.targetLevel} · Bloc ${game.targetSlot}/3",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontSize = 17.sp,
+                    )
+                }
+
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        (1..3).forEach { target ->
+                            FilterChip(
+                                selected = game.targetSlot == target,
+                                onClick = { onSelectSlot(target) },
+                                enabled = !game.isPlaced(game.targetLevel, target),
+                                label = { Text("Bloc $target") },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = onNextFloor,
+                        enabled = game.canAdvanceFloor,
+                        modifier = Modifier.fillMaxWidth().height(54.dp),
+                    ) {
+                        Text("PASSER À L'ÉTAGE SUIVANT")
+                    }
+                }
+
+                if (!game.hasPlacedOnLevel(game.targetLevel) && game.targetLevel < 10) {
+                    item {
+                        Text(
+                            "Pose au moins 1 bloc à cet étage avant de passer au suivant.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            }
+
+            item {
+                Button(
+                    onClick = onBlockPlaced,
+                    enabled = game.isInProgress &&
+                        !game.isFinished &&
+                        !game.isPlaced(game.targetLevel, game.targetSlot),
+                    modifier = Modifier.fillMaxWidth().height(68.dp),
+                ) {
+                    Text(
+                        if (game.isFinished) "PARTIE TERMINÉE" else "BLOC ${game.targetSlot} POSÉ",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
                     )
                 }
             }
@@ -527,12 +594,28 @@ private fun GameScreen(
             title = { Text("Qui a fait tomber la tour ?") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = { fallenDialog = false; onTowerFallen(0) }, modifier = Modifier.fillMaxWidth()) { Text(game.player1) }
-                    Button(onClick = { fallenDialog = false; onTowerFallen(1) }, modifier = Modifier.fillMaxWidth()) { Text(game.player2) }
+                    Button(
+                        onClick = {
+                            fallenDialog = false
+                            onTowerFallen(0)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(game.player1) }
+                    Button(
+                        onClick = {
+                            fallenDialog = false
+                            onTowerFallen(1)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(game.player2) }
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { fallenDialog = false }) { Text("Annuler") } },
+            dismissButton = {
+                TextButton(onClick = { fallenDialog = false }) {
+                    Text("Annuler")
+                }
+            },
         )
     }
 }
