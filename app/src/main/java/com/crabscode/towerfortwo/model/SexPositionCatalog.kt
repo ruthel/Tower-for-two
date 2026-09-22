@@ -166,10 +166,16 @@ object SexPositionCatalog {
     }
 
     fun eligiblePractices(level: Int, settings: AppSettings): List<SexualPractice> {
-        if (!settings.allowSexualPractices) return emptyList()
-        return settings.allowedSexualPractices
+        val selected = settings.allowedSexualPractices.ifEmpty { SexualPractice.playable.toSet() }
+        return selected
             .filter { it != SexualPractice.CHOICE && it.minLevel <= level }
-            .filter { practice -> positions.any { it.practice == practice && it.minLevel <= level && (settings.allowStandingSexPositions || !it.standing) } }
+            .filter { practice ->
+                positions.any {
+                    it.practice == practice &&
+                        it.minLevel <= level &&
+                        (settings.allowStandingSexPositions || !it.standing)
+                }
+            }
     }
 
     fun positionsFor(practice: SexualPractice, level: Int, settings: AppSettings): List<SexPositionSpec> =
@@ -185,7 +191,7 @@ object SexPositionCatalog {
         settings: AppSettings,
         actor: Int,
     ): ResolvedSexualAction? {
-        if (!challenge.sexual || !settings.allowSexualPractices) return null
+        if (!challenge.sexual) return null
 
         val eligiblePractices = eligiblePractices(challenge.level, settings)
         if (eligiblePractices.isEmpty()) return null

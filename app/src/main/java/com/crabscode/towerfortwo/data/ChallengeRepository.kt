@@ -112,7 +112,6 @@ class ChallengeRepository(private val context: Context) {
         }
 
         if (!c.sexual) return true
-        if (!settings.allowSexualPractices) return false
 
         val available = SexPositionCatalog.eligiblePractices(c.level, settings)
         if (available.isEmpty()) return false

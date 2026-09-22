@@ -165,7 +165,7 @@ data class AppSettings(
         }
 
     fun isSexualFinalLevel(level: Int): Boolean =
-        allowSexualPractices && level >= sexualFinalStartLevel
+        level >= sexualFinalStartLevel
 }
 
 data class GameUiState(

@@ -224,6 +224,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
     fun setSexualPracticeAllowed(practice: SexualPractice, value: Boolean) {
         if (practice == SexualPractice.CHOICE) return
         val current = _uiState.value.settings.allowedSexualPractices
+        if (!value && practice in current && current.size <= 1) return
         val updated = if (value) current + practice else current - practice
         updateSettings(_uiState.value.settings.copy(allowedSexualPractices = updated))
     }
@@ -287,7 +288,16 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
     private fun pick(level: Int, slot: Int, settings: AppSettings, excludeId: String?): Challenge? {
         val eligible = challengeRepository.eligible(allChallenges, level, slot, settings)
         val alternatives = eligible.filterNot { it.id == excludeId }.ifEmpty { eligible }
-        return alternatives.randomOrNull()
+        if (alternatives.isNotEmpty()) return alternatives.random()
+
+        // Safety net: never let a valid placement become a dead button.
+        val sameCell = allChallenges.filter {
+            it.enabled &&
+                it.level == level &&
+                it.slot == slot &&
+                it.id != excludeId
+        }
+        return sameCell.randomOrNull()
     }
 
     private fun applyResolvedAction(game: GameState, resolved: ResolvedSexualAction?): GameState {
