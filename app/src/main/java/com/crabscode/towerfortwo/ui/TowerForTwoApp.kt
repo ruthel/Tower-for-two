@@ -52,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -75,6 +76,7 @@ import com.crabscode.towerfortwo.model.ChallengeType
 import com.crabscode.towerfortwo.model.GameUiState
 import com.crabscode.towerfortwo.model.Intensity
 import com.crabscode.towerfortwo.viewmodel.TowerViewModel
+import kotlinx.coroutines.delay
 
 private object Routes {
     const val HOME = "home"
@@ -113,6 +115,8 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
             GameScreen(
                 state = state,
                 onBlockPlaced = viewModel::placeBlock,
+                onSelectSlot = viewModel::selectTargetSlot,
+                onNextFloor = viewModel::nextFloor,
                 onJoker = viewModel::useJoker,
                 onSettings = { navController.navigate(Routes.SETTINGS) },
                 onCustom = { navController.navigate(Routes.CUSTOM) },
@@ -237,6 +241,8 @@ private fun HomeScreen(
 private fun GameScreen(
     state: GameUiState,
     onBlockPlaced: () -> Unit,
+    onSelectSlot: (Int) -> Unit,
+    onNextFloor: () -> Unit,
     onJoker: () -> Unit,
     onSettings: () -> Unit,
     onCustom: () -> Unit,
@@ -280,12 +286,48 @@ private fun GameScreen(
                         Text("PASSER / JOKER")
                     }
                 }
+
+                if (!game.isFinished) {
+                    Text(
+                        "Prochain placement · Étage ${16 + game.targetLevel} · Bloc ${game.targetSlot}/3",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        (1..3).forEach { target ->
+                            FilterChip(
+                                selected = game.targetSlot == target,
+                                onClick = { onSelectSlot(target) },
+                                enabled = !game.isPlaced(game.targetLevel, target),
+                                label = { Text("Bloc $target") },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = onNextFloor,
+                        enabled = game.targetLevel < 10,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("PASSER À L'ÉTAGE SUIVANT")
+                    }
+                }
+
                 Button(
                     onClick = onBlockPlaced,
-                    enabled = game.isInProgress && game.blocksPlaced < 30,
+                    enabled = game.isInProgress && !game.isFinished && !game.isPlaced(game.targetLevel, game.targetSlot),
                     modifier = Modifier.fillMaxWidth().height(68.dp),
                 ) {
-                    Text(if (game.blocksPlaced >= 30) "PARTIE TERMINÉE" else "BLOC POSÉ", fontSize = 20.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        if (game.isFinished) "PARTIE TERMINÉE" else "BLOC ${game.targetSlot} POSÉ",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                    )
                 }
             }
         },
@@ -295,7 +337,7 @@ private fun GameScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text("Étage ${16 + level} — Bloc $slot/3", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            LevelProgress(currentLevel = level, completed = game.blocksPlaced / 3)
+            LevelProgress(currentLevel = game.targetLevel, completed = game.completedLevelCount)
 
             if (challenge == null) {
                 Card(modifier = Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(28.dp)) {
@@ -351,9 +393,79 @@ private fun ChallengeCard(challenge: Challenge, actor: String?) {
             if (actor != null) Text("Pour $actor", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(if (action) "ACTION" else "VÉRITÉ", fontSize = 18.sp, fontWeight = FontWeight.Black, color = if (action) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary)
             Text(challenge.text, fontSize = 27.sp, lineHeight = 36.sp, fontWeight = FontWeight.SemiBold)
+            if (action) {
+                ActionCountdown(challengeId = challenge.id, text = challenge.text)
+            }
         }
     }
 }
+
+@Composable
+private fun ActionCountdown(challengeId: String, text: String) {
+    val initialSeconds = remember(challengeId, text) { actionDurationSeconds(text) }
+    var remaining by remember(challengeId) { mutableIntStateOf(initialSeconds) }
+    var running by remember(challengeId) { mutableStateOf(false) }
+
+    LaunchedEffect(running, remaining, challengeId) {
+        if (running && remaining > 0) {
+            delay(1_000)
+            remaining -= 1
+        } else if (remaining <= 0) {
+            running = false
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            if (remaining > 0) "Décompte · ${formatCountdown(remaining)}" else "Décompte terminé",
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = {
+                    when {
+                        remaining <= 0 -> {
+                            remaining = initialSeconds
+                            running = true
+                        }
+                        else -> running = !running
+                    }
+                },
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(
+                    when {
+                        remaining <= 0 -> "RECOMMENCER"
+                        running -> "PAUSE"
+                        remaining < initialSeconds -> "REPRENDRE"
+                        else -> "LANCER"
+                    }
+                )
+            }
+            OutlinedButton(
+                onClick = {
+                    running = false
+                    remaining = initialSeconds
+                },
+                enabled = remaining != initialSeconds || running,
+            ) {
+                Text("RESET")
+            }
+        }
+    }
+}
+
+private fun actionDurationSeconds(text: String): Int {
+    val minuteMatch = Regex("""(\d+)\s*(?:minute|minutes|min)""", RegexOption.IGNORE_CASE).find(text)
+    if (minuteMatch != null) return minuteMatch.groupValues[1].toIntOrNull()?.times(60) ?: 30
+
+    val secondMatch = Regex("""(\d+)\s*(?:seconde|secondes|sec|s)\b""", RegexOption.IGNORE_CASE).find(text)
+    return secondMatch?.groupValues?.get(1)?.toIntOrNull() ?: 30
+}
+
+private fun formatCountdown(seconds: Int): String =
+    if (seconds >= 60) "%d:%02d".format(seconds / 60, seconds % 60) else "${seconds}s"
 
 @Composable
 private fun LevelProgress(currentLevel: Int, completed: Int) {

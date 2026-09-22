@@ -30,18 +30,31 @@ data class GameState(
     val player2: String = "Joueur 2",
     val currentPlayerIndex: Int = 0,
     val blocksPlaced: Int = 0,
+    val targetLevel: Int = 1,
+    val targetSlot: Int = 1,
+    val placedPositions: Set<String> = emptySet(),
     val currentChallengeId: String? = null,
     val challengePlayerIndex: Int? = null,
     val fallenByIndex: Int? = null,
     val isInProgress: Boolean = false,
     val isFinished: Boolean = false,
 ) {
-    val nextLevel: Int get() = (blocksPlaced / 3 + 1).coerceAtMost(10)
-    val nextSlot: Int get() = (blocksPlaced % 3) + 1
-    val currentLevel: Int get() = if (blocksPlaced == 0) 1 else ((blocksPlaced - 1) / 3 + 1).coerceAtMost(10)
-    val currentSlot: Int get() = if (blocksPlaced == 0) 1 else ((blocksPlaced - 1) % 3 + 1)
-    val reachedLevel: Int get() = if (blocksPlaced == 0) 0 else ((blocksPlaced - 1) / 3 + 1).coerceAtMost(10)
+    val nextLevel: Int get() = targetLevel.coerceIn(1, 10)
+    val nextSlot: Int get() = targetSlot.coerceIn(1, 3)
+    val currentLevel: Int get() = nextLevel
+    val currentSlot: Int get() = nextSlot
+    val reachedLevel: Int
+        get() = placedPositions
+            .mapNotNull { it.substringBefore(':').toIntOrNull() }
+            .maxOrNull()
+            ?: if (blocksPlaced == 0) 0 else ((blocksPlaced - 1) / 3 + 1).coerceAtMost(10)
+
+    val completedLevelCount: Int
+        get() = if (isFinished) 10 else (nextLevel - 1).coerceIn(0, 9)
+
     fun playerName(index: Int): String = if (index == 0) player1 else player2
+    fun positionKey(level: Int, slot: Int): String = "$level:$slot"
+    fun isPlaced(level: Int, slot: Int): Boolean = positionKey(level, slot) in placedPositions
 }
 
 data class AppSettings(

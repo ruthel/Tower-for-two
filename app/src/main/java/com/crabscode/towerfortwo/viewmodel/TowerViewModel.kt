@@ -54,6 +54,9 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
                 player2 = player2.trim().ifBlank { "Joueur 2" },
                 currentPlayerIndex = 0,
                 blocksPlaced = 0,
+                targetLevel = 1,
+                targetSlot = 1,
+                placedPositions = emptySet(),
                 isInProgress = true,
             )
             _uiState.update { it.copy(freePlayChallenge = null) }
@@ -64,23 +67,60 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
     fun placeBlock() {
         val state = _uiState.value
         val game = state.game
-        if (!game.isInProgress || game.blocksPlaced >= 30) return
+        if (!game.isInProgress || game.isFinished) return
 
-        val index = game.blocksPlaced
-        val level = index / 3 + 1
-        val slot = index % 3 + 1
+        val level = game.targetLevel.coerceIn(1, 10)
+        val slot = game.targetSlot.coerceIn(1, 3)
+        if (game.isPlaced(level, slot)) return
+
         val challenge = pick(level, slot, state.settings, excludeId = null) ?: return
         val actor = game.currentPlayerIndex
-        val newCount = game.blocksPlaced + 1
+        val placed = game.placedPositions + game.positionKey(level, slot)
+        val finished = level == 10 && slot == 3
+
+        val next = if (finished) {
+            level to slot
+        } else {
+            nextTarget(level, slot, placed)
+        }
 
         val updated = game.copy(
             currentPlayerIndex = 1 - actor,
-            blocksPlaced = newCount,
+            blocksPlaced = placed.size,
+            targetLevel = next.first,
+            targetSlot = next.second,
+            placedPositions = placed,
             currentChallengeId = challenge.id,
             challengePlayerIndex = actor,
-            isFinished = newCount >= 30,
+            isInProgress = !finished,
+            isFinished = finished,
         )
         viewModelScope.launch { preferences.saveGame(updated) }
+    }
+
+    fun selectTargetSlot(slot: Int) {
+        val game = _uiState.value.game
+        val safeSlot = slot.coerceIn(1, 3)
+        if (!game.isInProgress || game.isFinished || game.isPlaced(game.targetLevel, safeSlot)) return
+        viewModelScope.launch { preferences.saveGame(game.copy(targetSlot = safeSlot)) }
+    }
+
+    fun nextFloor() {
+        val game = _uiState.value.game
+        if (!game.isInProgress || game.isFinished || game.targetLevel >= 10) return
+        val newLevel = game.targetLevel + 1
+        val firstAvailable = (1..3).firstOrNull { !game.isPlaced(newLevel, it) } ?: 1
+        viewModelScope.launch {
+            preferences.saveGame(game.copy(targetLevel = newLevel, targetSlot = firstAvailable))
+        }
+    }
+
+    private fun nextTarget(level: Int, slot: Int, placed: Set<String>): Pair<Int, Int> {
+        val nextSlot = ((slot + 1)..3).firstOrNull { "$level:$it" !in placed }
+        if (nextSlot != null) return level to nextSlot
+        if (level < 10) return (level + 1) to 1
+        val remaining = (1..3).firstOrNull { "10:$it" !in placed }
+        return 10 to (remaining ?: 3)
     }
 
     fun useJoker() {
