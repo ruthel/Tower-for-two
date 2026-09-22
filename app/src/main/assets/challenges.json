@@ -1027,22 +1027,24 @@
     "level": 7,
     "slot": 1,
     "type": "ACTION",
-    "text": "Laisse ton/ta partenaire te donner une consigne de séduction pendant une minute ; tu peux utiliser un Joker à tout moment.",
-    "intensity": "TORRIDE",
+    "text": "Si vous êtes tous les deux d'accord, fais des caresses intimes à ton/ta partenaire pendant 60 secondes, en suivant ses indications et en t'arrêtant immédiatement s'il/elle le demande.",
+    "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexual": true
   },
   {
     "id": "L07-S1-V5",
     "level": 7,
     "slot": 1,
     "type": "ACTION",
-    "text": "Si l'option est autorisée, laisse ton/ta partenaire choisir une couche de vêtement que tu peux retirer.",
+    "text": "Si vous êtes tous les deux d'accord, masturbe ton/ta partenaire pendant 60 secondes ; la personne qui reçoit guide le rythme et peut arrêter à tout moment.",
     "intensity": "VERY_HOT",
-    "clothing": true,
+    "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexual": true
   },
   {
     "id": "L07-S2-V1",
@@ -1192,22 +1194,24 @@
     "level": 8,
     "slot": 1,
     "type": "ACTION",
-    "text": "Fais une promesse séduisante pour plus tard ce soir, mais uniquement quelque chose que tu es réellement prêt(e) à tenir.",
-    "intensity": "TORRIDE",
+    "text": "Si vous êtes tous les deux d'accord, pratiquez une masturbation mutuelle pendant 90 secondes, chacun pouvant ralentir ou arrêter à tout moment.",
+    "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexual": true
   },
   {
     "id": "L08-S1-V5",
     "level": 8,
     "slot": 1,
     "type": "ACTION",
-    "text": "Si l'option est autorisée, chacun choisit pour lui-même une couche de vêtement à retirer avant le prochain bloc.",
+    "text": "Si vous êtes tous les deux d'accord, choisissez qui reçoit du sexe oral pendant 60 secondes ; la personne qui reçoit guide et peut arrêter immédiatement.",
     "intensity": "VERY_HOT",
-    "clothing": true,
+    "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexual": true
   },
   {
     "id": "L08-S2-V1",
@@ -1357,22 +1361,24 @@
     "level": 9,
     "slot": 1,
     "type": "ACTION",
-    "text": "Inventez ensemble un scénario pour après la partie avec trois règles : consentement clair, possibilité de changer d'avis, et un signal pour ralentir.",
-    "intensity": "TORRIDE",
+    "text": "Choisissez ensemble entre sexe oral, masturbation ou caresses intimes pour 90 secondes. Le choix n'est lancé que si vous l'acceptez tous les deux.",
+    "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexual": true
   },
   {
     "id": "L09-S1-V5",
     "level": 9,
     "slot": 1,
     "type": "ACTION",
-    "text": "Si l'option est autorisée, chacun décide lui-même s'il retire une couche de vêtement ; aucun choix n'a besoin d'être justifié.",
+    "text": "Choisissez ensemble une pratique sexuelle que vous aimez déjà et faites-la pendant 120 secondes, avec possibilité d'arrêter ou de changer de rythme à tout moment.",
     "intensity": "VERY_HOT",
-    "clothing": true,
+    "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexual": true
   },
   {
     "id": "L09-S2-V1",
@@ -1522,22 +1528,24 @@
     "level": 10,
     "slot": 1,
     "type": "ACTION",
-    "text": "Dis à ton/ta partenaire ce que tu aimerais vivre avec lui/elle quand vous vous sentez totalement en confiance, puis invite-le/la à modifier l'idée.",
-    "intensity": "TORRIDE",
+    "text": "Si vous en avez tous les deux envie, essayez une pénétration pendant 120 secondes dans une position choisie ensemble ; arrêtez immédiatement au moindre inconfort.",
+    "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexual": true
   },
   {
     "id": "L10-S1-V5",
     "level": 10,
     "slot": 1,
     "type": "ACTION",
-    "text": "Si les options l'autorisent, partagez chacun un fantasme et choisissez ensemble s'il reste imaginaire, devient une discussion, ou mérite d'être exploré plus tard.",
+    "text": "Choisissez ensemble une pratique parmi sexe oral, masturbation mutuelle ou pénétration, puis consacrez-y 120 secondes. Rien ne commence sans un oui clair des deux.",
     "intensity": "VERY_HOT",
     "clothing": false,
-    "fantasy": true,
-    "enabled": true
+    "fantasy": false,
+    "enabled": true,
+    "sexual": true
   },
   {
     "id": "L10-S2-V1",

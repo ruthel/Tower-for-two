@@ -31,6 +31,7 @@ class ChallengeRepository(private val context: Context) {
         intensity: Intensity,
         clothing: Boolean,
         fantasy: Boolean,
+        sexual: Boolean,
     ): Challenge = withContext(Dispatchers.IO) {
         val challenge = Challenge(
             id = "custom-${UUID.randomUUID()}",
@@ -41,6 +42,7 @@ class ChallengeRepository(private val context: Context) {
             intensity = intensity,
             clothing = clothing,
             fantasy = fantasy,
+            sexual = sexual,
             custom = true,
         )
         val updated = loadCustom() + challenge
@@ -56,6 +58,7 @@ class ChallengeRepository(private val context: Context) {
         intensity: Intensity,
         clothing: Boolean,
         fantasy: Boolean,
+        sexual: Boolean,
     ) = withContext(Dispatchers.IO) {
         val updated = loadCustom().map { current ->
             if (current.id != id) current else current.copy(
@@ -66,6 +69,7 @@ class ChallengeRepository(private val context: Context) {
                 intensity = intensity,
                 clothing = clothing,
                 fantasy = fantasy,
+                sexual = sexual,
             )
         }
         saveCustom(updated)
@@ -87,7 +91,8 @@ class ChallengeRepository(private val context: Context) {
                 (slot == null || c.slot == slot) &&
                 c.intensity.rank <= settings.intensity.rank &&
                 (settings.allowClothing || !c.clothing) &&
-                (settings.allowFantasy || !c.fantasy)
+                (settings.allowFantasy || !c.fantasy) &&
+                (settings.allowSexualPractices || !c.sexual)
         }
     }
 
@@ -106,6 +111,7 @@ class ChallengeRepository(private val context: Context) {
                         intensity = Intensity.fromName(o.optString("intensity", Intensity.TORRIDE.name)),
                         clothing = o.optBoolean("clothing", false),
                         fantasy = o.optBoolean("fantasy", false),
+                        sexual = o.optBoolean("sexual", false),
                         enabled = o.optBoolean("enabled", true),
                         custom = custom || o.optBoolean("custom", false),
                     )
@@ -126,6 +132,7 @@ class ChallengeRepository(private val context: Context) {
                 put("intensity", c.intensity.name)
                 put("clothing", c.clothing)
                 put("fantasy", c.fantasy)
+                put("sexual", c.sexual)
                 put("enabled", c.enabled)
                 put("custom", true)
             })

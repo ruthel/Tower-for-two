@@ -32,6 +32,7 @@ class PreferencesRepository(private val context: Context) {
         val INTENSITY = stringPreferencesKey("intensity")
         val ALLOW_CLOTHING = booleanPreferencesKey("allow_clothing")
         val ALLOW_FANTASY = booleanPreferencesKey("allow_fantasy")
+        val ALLOW_SEXUAL_PRACTICES = booleanPreferencesKey("allow_sexual_practices")
     }
 
     val gameFlow: Flow<GameState> = context.dataStore.data.map { p ->
@@ -63,6 +64,7 @@ class PreferencesRepository(private val context: Context) {
             intensity = Intensity.fromName(p[Keys.INTENSITY]),
             allowClothing = p[Keys.ALLOW_CLOTHING] ?: false,
             allowFantasy = p[Keys.ALLOW_FANTASY] ?: true,
+            allowSexualPractices = p[Keys.ALLOW_SEXUAL_PRACTICES] ?: false,
         )
     }
 
@@ -88,6 +90,7 @@ class PreferencesRepository(private val context: Context) {
             p[Keys.INTENSITY] = settings.intensity.name
             p[Keys.ALLOW_CLOTHING] = settings.allowClothing
             p[Keys.ALLOW_FANTASY] = settings.allowFantasy
+            p[Keys.ALLOW_SEXUAL_PRACTICES] = settings.allowSexualPractices
         }
     }
 }

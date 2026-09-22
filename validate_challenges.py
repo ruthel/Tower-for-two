@@ -16,5 +16,13 @@ for level in range(1, 11):
         assert all(x["type"] == expected_type for x in cell)
         assert sum(x["intensity"] == "SENSUEL" for x in cell) >= 2
 
+sexual = [x for x in data if x.get("sexual", False)]
+assert len(sexual) == 8, f"Expected 8 sexual-practice variants, got {len(sexual)}"
+assert all(x["type"] == "ACTION" for x in sexual)
+assert all(x["slot"] == 1 for x in sexual)
+assert all(x["level"] >= 7 for x in sexual)
+assert all(x["intensity"] == "VERY_HOT" for x in sexual)
+
 print("OK: 150 challenges, 30 positions, 5 variants per position")
 print("Intensities:", Counter(x["intensity"] for x in data))
+print("Sexual-practice variants:", len(sexual))

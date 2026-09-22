@@ -21,6 +21,7 @@ data class Challenge(
     val intensity: Intensity,
     val clothing: Boolean = false,
     val fantasy: Boolean = false,
+    val sexual: Boolean = false,
     val enabled: Boolean = true,
     val custom: Boolean = false,
 )
@@ -43,6 +44,7 @@ data class GameState(
     val nextSlot: Int get() = targetSlot.coerceIn(1, 3)
     val currentLevel: Int get() = nextLevel
     val currentSlot: Int get() = nextSlot
+
     val reachedLevel: Int
         get() = placedPositions
             .mapNotNull { it.substringBefore(':').toIntOrNull() }
@@ -52,15 +54,20 @@ data class GameState(
     val completedLevelCount: Int
         get() = if (isFinished) 10 else (nextLevel - 1).coerceIn(0, 9)
 
+    val canAdvanceFloor: Boolean
+        get() = targetLevel < 10 && hasPlacedOnLevel(targetLevel)
+
     fun playerName(index: Int): String = if (index == 0) player1 else player2
     fun positionKey(level: Int, slot: Int): String = "$level:$slot"
     fun isPlaced(level: Int, slot: Int): Boolean = positionKey(level, slot) in placedPositions
+    fun hasPlacedOnLevel(level: Int): Boolean = placedPositions.any { it.startsWith("$level:") }
 }
 
 data class AppSettings(
     val intensity: Intensity = Intensity.TORRIDE,
     val allowClothing: Boolean = false,
     val allowFantasy: Boolean = true,
+    val allowSexualPractices: Boolean = false,
 )
 
 data class GameUiState(

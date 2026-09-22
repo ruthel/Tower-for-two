@@ -107,7 +107,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
 
     fun nextFloor() {
         val game = _uiState.value.game
-        if (!game.isInProgress || game.isFinished || game.targetLevel >= 10) return
+        if (!game.isInProgress || game.isFinished || !game.canAdvanceFloor) return
         val newLevel = game.targetLevel + 1
         val firstAvailable = (1..3).firstOrNull { !game.isPlaced(newLevel, it) } ?: 1
         viewModelScope.launch {
@@ -156,7 +156,8 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             c.level <= maxLevel && c.enabled &&
                 c.intensity.rank <= state.settings.intensity.rank &&
                 (state.settings.allowClothing || !c.clothing) &&
-                (state.settings.allowFantasy || !c.fantasy)
+                (state.settings.allowFantasy || !c.fantasy) &&
+                (state.settings.allowSexualPractices || !c.sexual)
         }
         if (pool.isNotEmpty()) {
             val previous = state.freePlayChallenge?.id
@@ -168,6 +169,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
     fun setIntensity(intensity: Intensity) = updateSettings(_uiState.value.settings.copy(intensity = intensity))
     fun setAllowClothing(value: Boolean) = updateSettings(_uiState.value.settings.copy(allowClothing = value))
     fun setAllowFantasy(value: Boolean) = updateSettings(_uiState.value.settings.copy(allowFantasy = value))
+    fun setAllowSexualPractices(value: Boolean) = updateSettings(_uiState.value.settings.copy(allowSexualPractices = value))
 
     private fun updateSettings(settings: AppSettings) {
         viewModelScope.launch { preferences.saveSettings(settings) }
@@ -180,10 +182,11 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         intensity: Intensity,
         clothing: Boolean,
         fantasy: Boolean,
+        sexual: Boolean,
     ) {
         if (text.isBlank()) return
         viewModelScope.launch {
-            challengeRepository.addCustom(level, slot, text, intensity, clothing, fantasy)
+            challengeRepository.addCustom(level, slot, text, intensity, clothing, fantasy, sexual)
             reloadChallenges()
         }
     }
@@ -196,10 +199,11 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         intensity: Intensity,
         clothing: Boolean,
         fantasy: Boolean,
+        sexual: Boolean,
     ) {
         if (text.isBlank()) return
         viewModelScope.launch {
-            challengeRepository.updateCustom(id, level, slot, text, intensity, clothing, fantasy)
+            challengeRepository.updateCustom(id, level, slot, text, intensity, clothing, fantasy, sexual)
             reloadChallenges()
         }
     }

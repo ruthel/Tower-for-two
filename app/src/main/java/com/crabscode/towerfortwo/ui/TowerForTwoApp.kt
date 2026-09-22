@@ -311,10 +311,19 @@ private fun GameScreen(
                     }
                     OutlinedButton(
                         onClick = onNextFloor,
-                        enabled = game.targetLevel < 10,
+                        enabled = game.canAdvanceFloor,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("PASSER À L'ÉTAGE SUIVANT")
+                    }
+                    if (!game.hasPlacedOnLevel(game.targetLevel) && game.targetLevel < 10) {
+                        Text(
+                            "Pose au moins 1 bloc à cet étage avant de passer au suivant.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                        )
                     }
                 }
 
@@ -513,6 +522,20 @@ private fun SettingsScreen(state: GameUiState, viewModel: TowerViewModel, onBack
             }
             item { SettingSwitch("Autoriser les défis avec retrait de vêtements", state.settings.allowClothing, viewModel::setAllowClothing) }
             item { SettingSwitch("Questions sur les fantasmes", state.settings.allowFantasy, viewModel::setAllowFantasy) }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SettingSwitch(
+                        "Pratiques sexuelles — mode adulte",
+                        state.settings.allowSexualPractices,
+                        viewModel::setAllowSexualPractices,
+                    )
+                    Text(
+                        "Ajoute des variantes Très torride aux niveaux 7–10. Désactivé par défaut ; Joker et arrêt restent toujours possibles.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                    )
+                }
+            }
             item { HorizontalDivider() }
             item {
                 Button(onClick = onCustom, modifier = Modifier.fillMaxWidth()) {
@@ -569,15 +592,15 @@ private fun CustomChallengesScreen(state: GameUiState, viewModel: TowerViewModel
     }
 
     if (addDialog) {
-        AddChallengeDialog(initial = null, onDismiss = { addDialog = false }, onSave = { level, slot, text, intensity, clothing, fantasy ->
-            viewModel.addCustomChallenge(level, slot, text, intensity, clothing, fantasy)
+        AddChallengeDialog(initial = null, onDismiss = { addDialog = false }, onSave = { level, slot, text, intensity, clothing, fantasy, sexual ->
+            viewModel.addCustomChallenge(level, slot, text, intensity, clothing, fantasy, sexual)
             addDialog = false
         })
     }
 
     editTarget?.let { target ->
-        AddChallengeDialog(initial = target, onDismiss = { editTarget = null }, onSave = { level, slot, text, intensity, clothing, fantasy ->
-            viewModel.updateCustomChallenge(target.id, level, slot, text, intensity, clothing, fantasy)
+        AddChallengeDialog(initial = target, onDismiss = { editTarget = null }, onSave = { level, slot, text, intensity, clothing, fantasy, sexual ->
+            viewModel.updateCustomChallenge(target.id, level, slot, text, intensity, clothing, fantasy, sexual)
             editTarget = null
         })
     }
@@ -587,7 +610,7 @@ private fun CustomChallengesScreen(state: GameUiState, viewModel: TowerViewModel
 private fun AddChallengeDialog(
     initial: Challenge?,
     onDismiss: () -> Unit,
-    onSave: (Int, Int, String, Intensity, Boolean, Boolean) -> Unit,
+    onSave: (Int, Int, String, Intensity, Boolean, Boolean, Boolean) -> Unit,
 ) {
     var level by remember(initial?.id) { mutableIntStateOf(initial?.level ?: 1) }
     var slot by remember(initial?.id) { mutableIntStateOf(initial?.slot ?: 1) }
@@ -595,6 +618,7 @@ private fun AddChallengeDialog(
     var intensity by remember(initial?.id) { mutableStateOf(initial?.intensity ?: Intensity.SENSUEL) }
     var clothing by remember(initial?.id) { mutableStateOf(initial?.clothing ?: false) }
     var fantasy by remember(initial?.id) { mutableStateOf(initial?.fantasy ?: false) }
+    var sexual by remember(initial?.id) { mutableStateOf(initial?.sexual ?: false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -624,9 +648,10 @@ private fun AddChallengeDialog(
                 }
                 item { SettingSwitch("Retrait de vêtements", clothing) { clothing = it } }
                 item { SettingSwitch("Fantasme", fantasy) { fantasy = it } }
+                item { SettingSwitch("Pratique sexuelle", sexual) { sexual = it } }
             }
         },
-        confirmButton = { Button(onClick = { onSave(level, slot, text, intensity, clothing, fantasy) }, enabled = text.isNotBlank()) { Text("Enregistrer") } },
+        confirmButton = { Button(onClick = { onSave(level, slot, text, intensity, clothing, fantasy, sexual) }, enabled = text.isNotBlank()) { Text("Enregistrer") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
     )
 }
