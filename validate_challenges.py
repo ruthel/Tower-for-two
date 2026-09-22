@@ -17,15 +17,31 @@ for level in range(1, 11):
         assert sum(x["intensity"] == "SENSUEL" for x in cell) >= 2
 
 sexual = [x for x in data if x.get("sexual", False)]
-assert len(sexual) == 8, f"Expected 8 sexual-practice variants, got {len(sexual)}"
 assert all(x["type"] == "ACTION" for x in sexual)
 assert all(x["slot"] == 1 for x in sexual)
-assert all(x["level"] >= 7 for x in sexual)
-assert all(x["intensity"] == "VERY_HOT" for x in sexual)
+assert all(x.get("sexRelated", False) for x in sexual)
+
 allowed_practices = {"CARESSES_INTIMES", "MASTURBATION", "MASTURBATION_MUTUELLE", "SEXE_ORAL", "PENETRATION", "CHOICE"}
 assert all(x.get("sexualPractice") in allowed_practices for x in sexual)
-assert all("position choisie" not in x["text"].lower() for x in sexual)
+
+tail_starts = {"SENSUEL": 10, "TORRIDE": 9, "VERY_HOT": 8}
+for intensity, start_level in tail_starts.items():
+    for level in range(1, 11):
+        for slot in range(1, 4):
+            exact = [
+                x for x in data
+                if x["level"] == level and x["slot"] == slot and x["intensity"] == intensity
+            ]
+            if level >= start_level:
+                assert any(x.get("sexRelated", False) for x in exact), (
+                    f"Missing sex-related {intensity} variant at level {level}, slot {slot}"
+                )
+            elif level >= 8:
+                assert any(not x.get("sexRelated", False) for x in exact) or not exact, (
+                    f"All {intensity} variants became sexual too early at level {level}, slot {slot}"
+                )
 
 print("OK: 150 challenges, 30 positions, 5 variants per position")
 print("Intensities:", Counter(x["intensity"] for x in data))
-print("Sexual-practice variants:", len(sexual))
+print("Sexual actions:", len(sexual))
+print("Sex-related prompts:", sum(bool(x.get("sexRelated", False)) for x in data))

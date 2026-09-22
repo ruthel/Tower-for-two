@@ -45,6 +45,7 @@ class ChallengeRepository(private val context: Context) {
             clothing = clothing,
             fantasy = fantasy,
             sexual = sexual,
+            sexRelated = sexual,
             sexualPractice = if (sexual) SexualPractice.CHOICE else null,
             custom = true,
         )
@@ -73,6 +74,7 @@ class ChallengeRepository(private val context: Context) {
                 clothing = clothing,
                 fantasy = fantasy,
                 sexual = sexual,
+                sexRelated = sexual,
                 sexualPractice = if (sexual) (current.sexualPractice ?: SexualPractice.CHOICE) else null,
             )
         }
@@ -97,9 +99,18 @@ class ChallengeRepository(private val context: Context) {
     }
 
     fun isEligibleChallenge(c: Challenge, settings: AppSettings): Boolean {
-        if (!c.enabled || c.intensity.rank > settings.intensity.rank) return false
+        if (!c.enabled) return false
         if (!settings.allowClothing && c.clothing) return false
         if (!settings.allowFantasy && c.fantasy) return false
+
+        val sexualFinal = settings.isSexualFinalLevel(c.level)
+
+        if (sexualFinal) {
+            if (!c.sexRelated || c.intensity != settings.intensity) return false
+        } else {
+            if (c.sexRelated || c.intensity.rank > settings.intensity.rank) return false
+        }
+
         if (!c.sexual) return true
         if (!settings.allowSexualPractices) return false
 
@@ -125,6 +136,7 @@ class ChallengeRepository(private val context: Context) {
                         clothing = o.optBoolean("clothing", false),
                         fantasy = o.optBoolean("fantasy", false),
                         sexual = o.optBoolean("sexual", false),
+                        sexRelated = o.optBoolean("sexRelated", o.optBoolean("sexual", false)),
                         sexualPractice = SexualPractice.fromName(o.optString("sexualPractice", null)),
                         enabled = o.optBoolean("enabled", true),
                         custom = custom || o.optBoolean("custom", false),
@@ -147,6 +159,7 @@ class ChallengeRepository(private val context: Context) {
                 put("clothing", c.clothing)
                 put("fantasy", c.fantasy)
                 put("sexual", c.sexual)
+                put("sexRelated", c.sexRelated)
                 c.sexualPractice?.let { put("sexualPractice", it.name) }
                 put("enabled", c.enabled)
                 put("custom", true)

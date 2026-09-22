@@ -1033,7 +1033,8 @@
     "fantasy": false,
     "enabled": true,
     "sexual": true,
-    "sexualPractice": "CARESSES_INTIMES"
+    "sexualPractice": "CARESSES_INTIMES",
+    "sexRelated": true
   },
   {
     "id": "L07-S1-V5",
@@ -1046,7 +1047,8 @@
     "fantasy": false,
     "enabled": true,
     "sexual": true,
-    "sexualPractice": "MASTURBATION"
+    "sexualPractice": "MASTURBATION",
+    "sexRelated": true
   },
   {
     "id": "L07-S2-V1",
@@ -1196,26 +1198,28 @@
     "level": 8,
     "slot": 1,
     "type": "ACTION",
-    "text": "Défi adulte à deux : l'application a préparé une séquence de masturbation mutuelle avec une position et une durée précises.",
+    "text": "Défi sexuel : l'application choisit automatiquement une pratique parmi celles autorisées, puis fixe les rôles, la position et la durée.",
     "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": false,
     "enabled": true,
     "sexual": true,
-    "sexualPractice": "MASTURBATION_MUTUELLE"
+    "sexualPractice": "CHOICE",
+    "sexRelated": true
   },
   {
     "id": "L08-S1-V5",
     "level": 8,
     "slot": 1,
     "type": "ACTION",
-    "text": "Défi adulte : l'application a préparé une séquence de sexe oral avec donneur, receveur, position et durée définis.",
+    "text": "Défi sexuel : laissez l'application préparer entièrement une pratique, une position compatible et une durée pour vous deux.",
     "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": false,
     "enabled": true,
     "sexual": true,
-    "sexualPractice": "SEXE_ORAL"
+    "sexualPractice": "CHOICE",
+    "sexRelated": true
   },
   {
     "id": "L08-S2-V1",
@@ -1266,11 +1270,12 @@
     "level": 8,
     "slot": 2,
     "type": "TRUTH",
-    "text": "Quel scénario intime as-tu déjà imaginé avec moi sans me le raconter ?",
+    "text": "Pendant le sexe, qu'est-ce qui te fait le plus facilement passer de l'excitation au plaisir intense ?",
     "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": true,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L08-S3-V1",
@@ -1321,11 +1326,12 @@
     "level": 8,
     "slot": 3,
     "type": "TRUTH",
-    "text": "Quel fantasme te semble le plus excitant à partager verbalement avec moi ?",
+    "text": "Quelle pratique sexuelle aimerais-tu recevoir plus souvent, et qu'est-ce qui la rend particulièrement agréable pour toi ?",
     "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": true,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L09-S1-V1",
@@ -1354,37 +1360,42 @@
     "level": 9,
     "slot": 1,
     "type": "ACTION",
-    "text": "Dis exactement ce que tu voudrais que ton/ta partenaire fasse plus souvent pour nourrir votre désir, puis écoute sa réponse.",
+    "text": "Défi sexuel : l'application choisit maintenant une pratique autorisée, les rôles, la position et la durée.",
     "intensity": "TORRIDE",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexual": true,
+    "sexRelated": true,
+    "sexualPractice": "CHOICE"
   },
   {
     "id": "L09-S1-V4",
     "level": 9,
     "slot": 1,
     "type": "ACTION",
-    "text": "Défi adulte surprise : l'application choisit automatiquement une pratique compatible, les rôles, une position et une durée.",
-    "intensity": "VERY_HOT",
+    "text": "Défi sexuel : suivez la pratique et la position préparées automatiquement par l'application.",
+    "intensity": "TORRIDE",
     "clothing": false,
     "fantasy": false,
     "enabled": true,
     "sexual": true,
-    "sexualPractice": "CHOICE"
+    "sexualPractice": "CHOICE",
+    "sexRelated": true
   },
   {
     "id": "L09-S1-V5",
     "level": 9,
     "slot": 1,
     "type": "ACTION",
-    "text": "Défi adulte surprise : laissez l'application préparer entièrement l'action suivante parmi vos pratiques autorisées.",
+    "text": "Défi sexuel intense : l'application prépare entièrement la pratique, les rôles, la position et la durée.",
     "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": false,
     "enabled": true,
     "sexual": true,
-    "sexualPractice": "CHOICE"
+    "sexualPractice": "CHOICE",
+    "sexRelated": true
   },
   {
     "id": "L09-S2-V1",
@@ -1413,33 +1424,36 @@
     "level": 9,
     "slot": 2,
     "type": "TRUTH",
-    "text": "Y a-t-il une expérience intime que tu as longtemps cru ne jamais oser proposer ?",
+    "text": "Quelle pratique sexuelle te donne le plus envie de perdre le contrôle, et pourquoi ?",
     "intensity": "TORRIDE",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L09-S2-V4",
     "level": 9,
     "slot": 2,
     "type": "TRUTH",
-    "text": "Quelle différence fais-tu entre un fantasme que tu aimes imaginer et une envie que tu voudrais réellement essayer ?",
+    "text": "Pendant le sexe, quel rythme ou quelle manière de bouger te donne généralement le plus de plaisir ?",
     "intensity": "TORRIDE",
     "clothing": false,
     "fantasy": true,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L09-S2-V5",
     "level": 9,
     "slot": 2,
     "type": "TRUTH",
-    "text": "Quel fantasme te semblerait le plus simple à transformer en discussion concrète entre nous ?",
+    "text": "Quelle pratique sexuelle très intense aimerais-tu vivre plus longtemps avec moi ?",
     "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": true,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L09-S3-V1",
@@ -1468,201 +1482,225 @@
     "level": 9,
     "slot": 3,
     "type": "TRUTH",
-    "text": "Quelle expérience nouvelle te demanderait le plus de confiance avant d'être envisagée ?",
+    "text": "Quelle position sexuelle te permet le mieux de profiter du rythme et du contact avec moi ?",
     "intensity": "TORRIDE",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L09-S3-V4",
     "level": 9,
     "slot": 3,
     "type": "TRUTH",
-    "text": "Qu'aimerais-tu que je respecte toujours, même si tu sembles très enthousiaste sur le moment ?",
+    "text": "Qu'aimerais-tu que je fasse différemment pendant le sexe pour augmenter encore ton plaisir ?",
     "intensity": "TORRIDE",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L09-S3-V5",
     "level": 9,
     "slot": 3,
     "type": "TRUTH",
-    "text": "Si nous pouvions planifier une expérience intime idéale sans aucune pression, quels seraient les trois éléments indispensables ?",
+    "text": "Si tu pouvais choisir une seule pratique sexuelle pour finir la soirée, laquelle voudrais-tu et comment aimerais-tu qu'elle se déroule ?",
     "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L10-S1-V1",
     "level": 10,
     "slot": 1,
     "type": "ACTION",
-    "text": "Chacun révèle une envie à l'autre et vous décidez ensemble laquelle vous souhaitez poursuivre après la partie, ou si vous préférez simplement en parler.",
+    "text": "Dernier niveau : l'application choisit une pratique sexuelle autorisée, les rôles, une position compatible et une durée.",
     "intensity": "SENSUEL",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexual": true,
+    "sexRelated": true,
+    "sexualPractice": "CHOICE"
   },
   {
     "id": "L10-S1-V2",
     "level": 10,
     "slot": 1,
     "type": "ACTION",
-    "text": "À tour de rôle, formulez une demande intime précise ; l'autre répond uniquement par oui, non ou 'à discuter', sans avoir à se justifier.",
+    "text": "Final sexuel : suivez la pratique, la position et la durée que l'application a préparées pour vous.",
     "intensity": "SENSUEL",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexual": true,
+    "sexRelated": true,
+    "sexualPractice": "CHOICE"
   },
   {
     "id": "L10-S1-V3",
     "level": 10,
     "slot": 1,
     "type": "ACTION",
-    "text": "Construisez ensemble une idée audacieuse pour une prochaine soirée, avec une limite claire et une façon simple d'arrêter immédiatement.",
+    "text": "Final torride : l'application prépare automatiquement une pratique sexuelle, les rôles, la position et la durée.",
     "intensity": "TORRIDE",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexual": true,
+    "sexRelated": true,
+    "sexualPractice": "CHOICE"
   },
   {
     "id": "L10-S1-V4",
     "level": 10,
     "slot": 1,
     "type": "ACTION",
-    "text": "Défi adulte : l'application a préparé une séquence de pénétration avec rôles, position et durée définis.",
-    "intensity": "VERY_HOT",
+    "text": "Final torride : laissez l'application choisir une nouvelle pratique sexuelle compatible et exécutez la consigne préparée.",
+    "intensity": "TORRIDE",
     "clothing": false,
     "fantasy": false,
     "enabled": true,
     "sexual": true,
-    "sexualPractice": "PENETRATION"
+    "sexualPractice": "CHOICE",
+    "sexRelated": true
   },
   {
     "id": "L10-S1-V5",
     "level": 10,
     "slot": 1,
     "type": "ACTION",
-    "text": "Défi adulte final : l'application choisit automatiquement une pratique parmi celles que vous avez autorisées, puis prépare les rôles, la position et la durée.",
+    "text": "Final très torride : l'application choisit automatiquement une pratique sexuelle parmi celles autorisées, puis prépare les rôles, la position et la durée.",
     "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": false,
     "enabled": true,
     "sexual": true,
-    "sexualPractice": "CHOICE"
+    "sexualPractice": "CHOICE",
+    "sexRelated": true
   },
   {
     "id": "L10-S2-V1",
     "level": 10,
     "slot": 2,
     "type": "TRUTH",
-    "text": "Quelle est l'envie la plus audacieuse que tu serais réellement prêt(e) à essayer avec moi ?",
+    "text": "Pendant le sexe, quelle sensation ou quel mouvement aimerais-tu que je prolonge davantage ?",
     "intensity": "SENSUEL",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L10-S2-V2",
     "level": 10,
     "slot": 2,
     "type": "TRUTH",
-    "text": "Quelle vérité sur tes désirs aimerais-tu que je connaisse mieux à partir de ce soir ?",
+    "text": "Quelle pratique sexuelle avec moi te donne actuellement le plus envie, et qu'aimerais-tu précisément y retrouver ?",
     "intensity": "SENSUEL",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L10-S2-V3",
     "level": 10,
     "slot": 2,
     "type": "TRUTH",
-    "text": "Quelle expérience intime te semble réservée à un niveau de confiance très élevé entre nous ?",
+    "text": "Quelle pratique sexuelle voudrais-tu que nous fassions plus lentement ou plus longtemps pour mieux en profiter ?",
     "intensity": "TORRIDE",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L10-S2-V4",
     "level": 10,
     "slot": 2,
     "type": "TRUTH",
-    "text": "Quel désir voudrais-tu pouvoir me confier sans te demander si je vais le trouver étrange ?",
+    "text": "Quel changement de rythme, de position ou de rôle rendrait le sexe encore plus excitant pour toi ?",
     "intensity": "TORRIDE",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L10-S2-V5",
     "level": 10,
     "slot": 2,
     "type": "TRUTH",
-    "text": "Quel fantasme pourrais-tu envisager de transformer en expérience réelle uniquement si toutes tes conditions étaient respectées ?",
+    "text": "Quelle expérience sexuelle particulièrement intense aimerais-tu vivre avec moi quand toutes les conditions sont réunies ?",
     "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": true,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L10-S3-V1",
     "level": 10,
     "slot": 3,
     "type": "TRUTH",
-    "text": "Si tu pouvais me demander quelque chose ce soir sans aucune gêne, que demanderais-tu ?",
+    "text": "Si tu pouvais choisir comment terminer sexuellement cette partie, qu'aimerais-tu recevoir de moi ?",
     "intensity": "SENSUEL",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L10-S3-V2",
     "level": 10,
     "slot": 3,
     "type": "TRUTH",
-    "text": "Quelle chose voudrais-tu que je te demande avant de supposer ce que tu veux ?",
+    "text": "Pendant le sexe, qu'aimerais-tu pouvoir me demander plus directement sans aucune gêne ?",
     "intensity": "SENSUEL",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L10-S3-V3",
     "level": 10,
     "slot": 3,
     "type": "TRUTH",
-    "text": "Qu'aimerais-tu découvrir encore sur toi-même à travers notre intimité ?",
+    "text": "Quelle position sexuelle aimerais-tu explorer davantage avec moi, et qu'est-ce qui t'attire dans cette position ?",
     "intensity": "TORRIDE",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L10-S3-V4",
     "level": 10,
     "slot": 3,
     "type": "TRUTH",
-    "text": "Quelle conversation intime remettons-nous peut-être à plus tard alors qu'elle pourrait nous rapprocher ?",
+    "text": "Quelle pratique sexuelle te semble la plus adaptée quand tu veux quelque chose de vraiment intense ?",
     "intensity": "TORRIDE",
     "clothing": false,
     "fantasy": false,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   },
   {
     "id": "L10-S3-V5",
     "level": 10,
     "slot": 3,
     "type": "TRUTH",
-    "text": "Si tu savais que je ne te jugerais jamais, quel fantasme ou désir voudrais-tu m'expliquer en détail ?",
+    "text": "Pour un final sans retenue mais toujours consenti, quelle pratique, quel rythme et quel rôle voudrais-tu idéalement ?",
     "intensity": "VERY_HOT",
     "clothing": false,
     "fantasy": true,
-    "enabled": true
+    "enabled": true,
+    "sexRelated": true
   }
 ]

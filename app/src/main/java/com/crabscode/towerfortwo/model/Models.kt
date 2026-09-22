@@ -83,6 +83,7 @@ data class Challenge(
     val clothing: Boolean = false,
     val fantasy: Boolean = false,
     val sexual: Boolean = false,
+    val sexRelated: Boolean = false,
     val sexualPractice: SexualPractice? = null,
     val enabled: Boolean = true,
     val custom: Boolean = false,
@@ -155,7 +156,17 @@ data class AppSettings(
     val allowSexualPractices: Boolean = false,
     val allowedSexualPractices: Set<SexualPractice> = SexualPractice.playable.toSet(),
     val allowStandingSexPositions: Boolean = true,
-)
+) {
+    val sexualFinalStartLevel: Int
+        get() = when (intensity) {
+            Intensity.SENSUEL -> 10
+            Intensity.TORRIDE -> 9
+            Intensity.VERY_HOT -> 8
+        }
+
+    fun isSexualFinalLevel(level: Int): Boolean =
+        allowSexualPractices && level >= sexualFinalStartLevel
+}
 
 data class GameUiState(
     val game: GameState = GameState(),

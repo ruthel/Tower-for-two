@@ -948,7 +948,7 @@ private fun SettingsScreen(state: GameUiState, viewModel: TowerViewModel, onBack
                         viewModel::setAllowSexualPractices,
                     )
                     Text(
-                        "L'app choisit automatiquement la pratique, les rôles, une position compatible et la durée. Désactivé par défaut.",
+                        "L'app choisit automatiquement la pratique, les rôles, une position compatible et la durée. Fin sexuelle : Sensuel = niveau 10 · Torride = niveaux 9–10 · Très torride = niveaux 8–10.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                     )
