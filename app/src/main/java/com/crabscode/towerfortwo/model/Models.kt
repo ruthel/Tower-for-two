@@ -12,6 +12,20 @@ enum class Intensity(val rank: Int, val label: String) {
     }
 }
 
+enum class SexualPractice(val label: String) {
+    CARESSES_INTIMES("Caresses intimes"),
+    MASTURBATION("Masturbation"),
+    MASTURBATION_MUTUELLE("Masturbation mutuelle"),
+    SEXE_ORAL("Sexe oral"),
+    PENETRATION("Pénétration"),
+    CHOICE("Au choix");
+
+    companion object {
+        fun fromName(value: String?): SexualPractice? =
+            entries.firstOrNull { it.name == value }
+    }
+}
+
 data class Challenge(
     val id: String,
     val level: Int,
@@ -22,6 +36,7 @@ data class Challenge(
     val clothing: Boolean = false,
     val fantasy: Boolean = false,
     val sexual: Boolean = false,
+    val sexualPractice: SexualPractice? = null,
     val enabled: Boolean = true,
     val custom: Boolean = false,
 )
@@ -36,6 +51,8 @@ data class GameState(
     val placedPositions: Set<String> = emptySet(),
     val currentChallengeId: String? = null,
     val challengePlayerIndex: Int? = null,
+    val selectedSexualPractice: SexualPractice? = null,
+    val currentSexPosition: String? = null,
     val fallenByIndex: Int? = null,
     val isInProgress: Boolean = false,
     val isFinished: Boolean = false,

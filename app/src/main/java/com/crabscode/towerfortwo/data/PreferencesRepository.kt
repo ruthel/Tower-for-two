@@ -1,96 +1,109 @@
 package com.crabscode.towerfortwo.data
 
 import android.content.Context
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import android.content.SharedPreferences
 import com.crabscode.towerfortwo.model.AppSettings
 import com.crabscode.towerfortwo.model.GameState
 import com.crabscode.towerfortwo.model.Intensity
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import com.crabscode.towerfortwo.model.SexualPractice
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
-private val Context.dataStore by preferencesDataStore(name = "tower_for_two")
+class PreferencesRepository(context: Context) {
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences("tower_for_two", Context.MODE_PRIVATE)
 
-class PreferencesRepository(private val context: Context) {
     private object Keys {
-        val PLAYER_1 = stringPreferencesKey("player_1")
-        val PLAYER_2 = stringPreferencesKey("player_2")
-        val CURRENT_PLAYER = intPreferencesKey("current_player")
-        val BLOCKS_PLACED = intPreferencesKey("blocks_placed")
-        val TARGET_LEVEL = intPreferencesKey("target_level")
-        val TARGET_SLOT = intPreferencesKey("target_slot")
-        val PLACED_POSITIONS = stringSetPreferencesKey("placed_positions")
-        val CURRENT_CHALLENGE = stringPreferencesKey("current_challenge")
-        val CHALLENGE_PLAYER = intPreferencesKey("challenge_player")
-        val FALLEN_BY = intPreferencesKey("fallen_by")
-        val IN_PROGRESS = booleanPreferencesKey("in_progress")
-        val FINISHED = booleanPreferencesKey("finished")
-        val INTENSITY = stringPreferencesKey("intensity")
-        val ALLOW_CLOTHING = booleanPreferencesKey("allow_clothing")
-        val ALLOW_FANTASY = booleanPreferencesKey("allow_fantasy")
-        val ALLOW_SEXUAL_PRACTICES = booleanPreferencesKey("allow_sexual_practices")
+        const val PLAYER_1 = "player_1"
+        const val PLAYER_2 = "player_2"
+        const val CURRENT_PLAYER = "current_player"
+        const val BLOCKS_PLACED = "blocks_placed"
+        const val TARGET_LEVEL = "target_level"
+        const val TARGET_SLOT = "target_slot"
+        const val PLACED_POSITIONS = "placed_positions"
+        const val CURRENT_CHALLENGE = "current_challenge"
+        const val CHALLENGE_PLAYER = "challenge_player"
+        const val SELECTED_SEXUAL_PRACTICE = "selected_sexual_practice"
+        const val CURRENT_SEX_POSITION = "current_sex_position"
+        const val FALLEN_BY = "fallen_by"
+        const val IN_PROGRESS = "in_progress"
+        const val FINISHED = "finished"
+        const val INTENSITY = "intensity"
+        const val ALLOW_CLOTHING = "allow_clothing"
+        const val ALLOW_FANTASY = "allow_fantasy"
+        const val ALLOW_SEXUAL_PRACTICES = "allow_sexual_practices"
     }
 
-    val gameFlow: Flow<GameState> = context.dataStore.data.map { p ->
-        val oldCount = p[Keys.BLOCKS_PLACED] ?: 0
-        val migratedPositions = p[Keys.PLACED_POSITIONS] ?: (0 until oldCount.coerceAtMost(30))
+    private val _gameFlow = MutableStateFlow(readGame())
+    val gameFlow: StateFlow<GameState> = _gameFlow.asStateFlow()
+
+    private val _settingsFlow = MutableStateFlow(readSettings())
+    val settingsFlow: StateFlow<AppSettings> = _settingsFlow.asStateFlow()
+
+    private fun readGame(): GameState {
+        val oldCount = prefs.getInt(Keys.BLOCKS_PLACED, 0)
+        val storedPositions = prefs.getStringSet(Keys.PLACED_POSITIONS, null)?.toSet()
+        val migratedPositions = storedPositions ?: (0 until oldCount.coerceAtMost(30))
             .map { index -> "${index / 3 + 1}:${index % 3 + 1}" }
             .toSet()
         val fallbackLevel = (oldCount / 3 + 1).coerceIn(1, 10)
         val fallbackSlot = (oldCount % 3 + 1).coerceIn(1, 3)
 
-        GameState(
-            player1 = p[Keys.PLAYER_1] ?: "Joueur 1",
-            player2 = p[Keys.PLAYER_2] ?: "Joueur 2",
-            currentPlayerIndex = p[Keys.CURRENT_PLAYER] ?: 0,
+        return GameState(
+            player1 = prefs.getString(Keys.PLAYER_1, "Joueur 1") ?: "Joueur 1",
+            player2 = prefs.getString(Keys.PLAYER_2, "Joueur 2") ?: "Joueur 2",
+            currentPlayerIndex = prefs.getInt(Keys.CURRENT_PLAYER, 0),
             blocksPlaced = migratedPositions.size,
-            targetLevel = p[Keys.TARGET_LEVEL] ?: fallbackLevel,
-            targetSlot = p[Keys.TARGET_SLOT] ?: fallbackSlot,
+            targetLevel = prefs.getInt(Keys.TARGET_LEVEL, fallbackLevel),
+            targetSlot = prefs.getInt(Keys.TARGET_SLOT, fallbackSlot),
             placedPositions = migratedPositions,
-            currentChallengeId = p[Keys.CURRENT_CHALLENGE],
-            challengePlayerIndex = p[Keys.CHALLENGE_PLAYER],
-            fallenByIndex = p[Keys.FALLEN_BY],
-            isInProgress = p[Keys.IN_PROGRESS] ?: false,
-            isFinished = p[Keys.FINISHED] ?: false,
+            currentChallengeId = prefs.getString(Keys.CURRENT_CHALLENGE, null),
+            challengePlayerIndex = prefs.takeIf { it.contains(Keys.CHALLENGE_PLAYER) }?.getInt(Keys.CHALLENGE_PLAYER, 0),
+            selectedSexualPractice = SexualPractice.fromName(prefs.getString(Keys.SELECTED_SEXUAL_PRACTICE, null)),
+            currentSexPosition = prefs.getString(Keys.CURRENT_SEX_POSITION, null),
+            fallenByIndex = prefs.takeIf { it.contains(Keys.FALLEN_BY) }?.getInt(Keys.FALLEN_BY, 0),
+            isInProgress = prefs.getBoolean(Keys.IN_PROGRESS, false),
+            isFinished = prefs.getBoolean(Keys.FINISHED, false),
         )
     }
 
-    val settingsFlow: Flow<AppSettings> = context.dataStore.data.map { p ->
+    private fun readSettings(): AppSettings =
         AppSettings(
-            intensity = Intensity.fromName(p[Keys.INTENSITY]),
-            allowClothing = p[Keys.ALLOW_CLOTHING] ?: false,
-            allowFantasy = p[Keys.ALLOW_FANTASY] ?: true,
-            allowSexualPractices = p[Keys.ALLOW_SEXUAL_PRACTICES] ?: false,
+            intensity = Intensity.fromName(prefs.getString(Keys.INTENSITY, null)),
+            allowClothing = prefs.getBoolean(Keys.ALLOW_CLOTHING, false),
+            allowFantasy = prefs.getBoolean(Keys.ALLOW_FANTASY, true),
+            allowSexualPractices = prefs.getBoolean(Keys.ALLOW_SEXUAL_PRACTICES, false),
         )
-    }
 
     suspend fun saveGame(game: GameState) {
-        context.dataStore.edit { p ->
-            p[Keys.PLAYER_1] = game.player1
-            p[Keys.PLAYER_2] = game.player2
-            p[Keys.CURRENT_PLAYER] = game.currentPlayerIndex
-            p[Keys.BLOCKS_PLACED] = game.blocksPlaced
-            p[Keys.TARGET_LEVEL] = game.targetLevel
-            p[Keys.TARGET_SLOT] = game.targetSlot
-            p[Keys.PLACED_POSITIONS] = game.placedPositions
-            game.currentChallengeId?.let { p[Keys.CURRENT_CHALLENGE] = it } ?: p.remove(Keys.CURRENT_CHALLENGE)
-            game.challengePlayerIndex?.let { p[Keys.CHALLENGE_PLAYER] = it } ?: p.remove(Keys.CHALLENGE_PLAYER)
-            game.fallenByIndex?.let { p[Keys.FALLEN_BY] = it } ?: p.remove(Keys.FALLEN_BY)
-            p[Keys.IN_PROGRESS] = game.isInProgress
-            p[Keys.FINISHED] = game.isFinished
+        prefs.edit().apply {
+            putString(Keys.PLAYER_1, game.player1)
+            putString(Keys.PLAYER_2, game.player2)
+            putInt(Keys.CURRENT_PLAYER, game.currentPlayerIndex)
+            putInt(Keys.BLOCKS_PLACED, game.blocksPlaced)
+            putInt(Keys.TARGET_LEVEL, game.targetLevel)
+            putInt(Keys.TARGET_SLOT, game.targetSlot)
+            putStringSet(Keys.PLACED_POSITIONS, game.placedPositions)
+            game.currentChallengeId?.let { putString(Keys.CURRENT_CHALLENGE, it) } ?: remove(Keys.CURRENT_CHALLENGE)
+            game.challengePlayerIndex?.let { putInt(Keys.CHALLENGE_PLAYER, it) } ?: remove(Keys.CHALLENGE_PLAYER)
+            game.selectedSexualPractice?.let { putString(Keys.SELECTED_SEXUAL_PRACTICE, it.name) } ?: remove(Keys.SELECTED_SEXUAL_PRACTICE)
+            game.currentSexPosition?.let { putString(Keys.CURRENT_SEX_POSITION, it) } ?: remove(Keys.CURRENT_SEX_POSITION)
+            game.fallenByIndex?.let { putInt(Keys.FALLEN_BY, it) } ?: remove(Keys.FALLEN_BY)
+            putBoolean(Keys.IN_PROGRESS, game.isInProgress)
+            putBoolean(Keys.FINISHED, game.isFinished)
+            apply()
         }
+        _gameFlow.value = game
     }
 
     suspend fun saveSettings(settings: AppSettings) {
-        context.dataStore.edit { p ->
-            p[Keys.INTENSITY] = settings.intensity.name
-            p[Keys.ALLOW_CLOTHING] = settings.allowClothing
-            p[Keys.ALLOW_FANTASY] = settings.allowFantasy
-            p[Keys.ALLOW_SEXUAL_PRACTICES] = settings.allowSexualPractices
-        }
+        prefs.edit()
+            .putString(Keys.INTENSITY, settings.intensity.name)
+            .putBoolean(Keys.ALLOW_CLOTHING, settings.allowClothing)
+            .putBoolean(Keys.ALLOW_FANTASY, settings.allowFantasy)
+            .putBoolean(Keys.ALLOW_SEXUAL_PRACTICES, settings.allowSexualPractices)
+            .apply()
+        _settingsFlow.value = settings
     }
 }

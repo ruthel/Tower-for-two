@@ -12,6 +12,8 @@ import com.crabscode.towerfortwo.model.Challenge
 import com.crabscode.towerfortwo.model.GameState
 import com.crabscode.towerfortwo.model.GameUiState
 import com.crabscode.towerfortwo.model.Intensity
+import com.crabscode.towerfortwo.model.SexPositionCatalog
+import com.crabscode.towerfortwo.model.SexualPractice
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -84,6 +86,9 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             nextTarget(level, slot, placed)
         }
 
+        val practice = challenge.sexualPractice?.takeUnless { it == SexualPractice.CHOICE }
+        val position = SexPositionCatalog.random(practice)
+
         val updated = game.copy(
             currentPlayerIndex = 1 - actor,
             blocksPlaced = placed.size,
@@ -92,6 +97,8 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             placedPositions = placed,
             currentChallengeId = challenge.id,
             challengePlayerIndex = actor,
+            selectedSexualPractice = practice,
+            currentSexPosition = position,
             isInProgress = !finished,
             isFinished = finished,
         )
@@ -123,12 +130,53 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         return 10 to (remaining ?: 3)
     }
 
+    fun selectSexualPractice(practice: SexualPractice) {
+        val state = _uiState.value
+        val challenge = state.currentChallenge ?: return
+        if (!challenge.sexual || practice == SexualPractice.CHOICE) return
+        val position = SexPositionCatalog.random(practice, state.game.currentSexPosition)
+        viewModelScope.launch {
+            preferences.saveGame(
+                state.game.copy(
+                    selectedSexualPractice = practice,
+                    currentSexPosition = position,
+                )
+            )
+        }
+    }
+
+    fun rerollSexPosition() {
+        val state = _uiState.value
+        val challenge = state.currentChallenge ?: return
+        if (!challenge.sexual) return
+        val practice = state.game.selectedSexualPractice
+            ?: challenge.sexualPractice?.takeUnless { it == SexualPractice.CHOICE }
+            ?: return
+        val position = SexPositionCatalog.random(practice, state.game.currentSexPosition)
+        viewModelScope.launch {
+            preferences.saveGame(
+                state.game.copy(
+                    selectedSexualPractice = practice,
+                    currentSexPosition = position,
+                )
+            )
+        }
+    }
+
     fun useJoker() {
         val state = _uiState.value
         val current = state.currentChallenge ?: return
         val replacement = pick(current.level, current.slot, state.settings, current.id) ?: return
+        val practice = replacement.sexualPractice?.takeUnless { it == SexualPractice.CHOICE }
+        val position = SexPositionCatalog.random(practice)
         viewModelScope.launch {
-            preferences.saveGame(state.game.copy(currentChallengeId = replacement.id))
+            preferences.saveGame(
+                state.game.copy(
+                    currentChallengeId = replacement.id,
+                    selectedSexualPractice = practice,
+                    currentSexPosition = position,
+                )
+            )
         }
     }
 

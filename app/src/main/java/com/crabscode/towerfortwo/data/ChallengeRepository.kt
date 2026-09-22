@@ -5,6 +5,7 @@ import com.crabscode.towerfortwo.model.AppSettings
 import com.crabscode.towerfortwo.model.Challenge
 import com.crabscode.towerfortwo.model.ChallengeType
 import com.crabscode.towerfortwo.model.Intensity
+import com.crabscode.towerfortwo.model.SexualPractice
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -43,6 +44,7 @@ class ChallengeRepository(private val context: Context) {
             clothing = clothing,
             fantasy = fantasy,
             sexual = sexual,
+            sexualPractice = if (sexual) SexualPractice.CHOICE else null,
             custom = true,
         )
         val updated = loadCustom() + challenge
@@ -70,6 +72,7 @@ class ChallengeRepository(private val context: Context) {
                 clothing = clothing,
                 fantasy = fantasy,
                 sexual = sexual,
+                sexualPractice = if (sexual) (current.sexualPractice ?: SexualPractice.CHOICE) else null,
             )
         }
         saveCustom(updated)
@@ -112,6 +115,7 @@ class ChallengeRepository(private val context: Context) {
                         clothing = o.optBoolean("clothing", false),
                         fantasy = o.optBoolean("fantasy", false),
                         sexual = o.optBoolean("sexual", false),
+                        sexualPractice = SexualPractice.fromName(o.optString("sexualPractice", null)),
                         enabled = o.optBoolean("enabled", true),
                         custom = custom || o.optBoolean("custom", false),
                     )
@@ -133,6 +137,7 @@ class ChallengeRepository(private val context: Context) {
                 put("clothing", c.clothing)
                 put("fantasy", c.fantasy)
                 put("sexual", c.sexual)
+                c.sexualPractice?.let { put("sexualPractice", it.name) }
                 put("enabled", c.enabled)
                 put("custom", true)
             })

@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -75,6 +77,8 @@ import com.crabscode.towerfortwo.model.Challenge
 import com.crabscode.towerfortwo.model.ChallengeType
 import com.crabscode.towerfortwo.model.GameUiState
 import com.crabscode.towerfortwo.model.Intensity
+import com.crabscode.towerfortwo.model.SexPositionCatalog
+import com.crabscode.towerfortwo.model.SexualPractice
 import com.crabscode.towerfortwo.viewmodel.TowerViewModel
 import kotlinx.coroutines.delay
 
@@ -118,6 +122,8 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
                 onSelectSlot = viewModel::selectTargetSlot,
                 onNextFloor = viewModel::nextFloor,
                 onJoker = viewModel::useJoker,
+                onSelectSexualPractice = viewModel::selectSexualPractice,
+                onRerollSexPosition = viewModel::rerollSexPosition,
                 onSettings = { navController.navigate(Routes.SETTINGS) },
                 onCustom = { navController.navigate(Routes.CUSTOM) },
                 onPlayers = { navController.navigate(Routes.HOME) },
@@ -165,6 +171,10 @@ private fun HomeScreen(
 ) {
     var p1 by remember(state.game.player1) { mutableStateOf(if (state.game.player1 == "Joueur 1") "" else state.game.player1) }
     var p2 by remember(state.game.player2) { mutableStateOf(if (state.game.player2 == "Joueur 2") "" else state.game.player2) }
+    var playersValidated by remember(state.game.player1, state.game.player2) { mutableStateOf(state.game.isInProgress) }
+
+    val displayP1 = p1.trim().ifBlank { "Joueur 1" }
+    val displayP2 = p2.trim().ifBlank { "Joueur 2" }
 
     Scaffold { padding ->
         LazyColumn(
@@ -191,32 +201,64 @@ private fun HomeScreen(
             }
 
             item { Text("Joueurs", fontWeight = FontWeight.Bold, fontSize = 20.sp) }
-            item {
-                OutlinedTextField(
-                    value = p1,
-                    onValueChange = { p1 = it },
-                    label = { Text("Joueur 1 (facultatif)") },
-                    placeholder = { Text("Joueur 1") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+
+            if (!playersValidated) {
+                item {
+                    OutlinedTextField(
+                        value = p1,
+                        onValueChange = { p1 = it },
+                        label = { Text("Joueur 1 (facultatif)") },
+                        placeholder = { Text("Joueur 1") },
+                        leadingIcon = { Icon(Icons.Default.Person, null) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = p2,
+                        onValueChange = { p2 = it },
+                        label = { Text("Joueur 2 (facultatif)") },
+                        placeholder = { Text("Joueur 2") },
+                        leadingIcon = { Icon(Icons.Default.Person, null) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    Button(
+                        onClick = { playersValidated = true },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                    ) { Text("VALIDER LES JOUEURS") }
+                }
+            } else {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        PlayerValidatedCard("1", displayP1, Modifier.weight(1f))
+                        PlayerValidatedCard("2", displayP2, Modifier.weight(1f))
+                    }
+                }
+                item {
+                    OutlinedButton(
+                        onClick = { playersValidated = false },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Default.Edit, null)
+                        Spacer(Modifier.size(8.dp))
+                        Text("MODIFIER LES JOUEURS")
+                    }
+                }
+                item {
+                    Button(
+                        onClick = { onStart(displayP1, displayP2) },
+                        modifier = Modifier.fillMaxWidth().height(60.dp),
+                    ) { Text(if (state.game.isInProgress) "NOUVELLE PARTIE" else "COMMENCER") }
+                }
             }
-            item {
-                OutlinedTextField(
-                    value = p2,
-                    onValueChange = { p2 = it },
-                    label = { Text("Joueur 2 (facultatif)") },
-                    placeholder = { Text("Joueur 2") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            item {
-                Button(
-                    onClick = { onStart(p1, p2) },
-                    modifier = Modifier.fillMaxWidth().height(60.dp),
-                ) { Text(if (state.game.isInProgress) "NOUVELLE PARTIE" else "COMMENCER") }
-            }
+
             item {
                 TextButton(onClick = onSettings, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.Settings, contentDescription = null)
@@ -236,6 +278,32 @@ private fun HomeScreen(
     }
 }
 
+@Composable
+private fun PlayerValidatedCard(number: String, name: String, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(44.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(number, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onPrimary)
+                }
+            }
+            Text(name, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GameScreen(
@@ -244,6 +312,8 @@ private fun GameScreen(
     onSelectSlot: (Int) -> Unit,
     onNextFloor: () -> Unit,
     onJoker: () -> Unit,
+    onSelectSexualPractice: (SexualPractice) -> Unit,
+    onRerollSexPosition: () -> Unit,
     onSettings: () -> Unit,
     onCustom: () -> Unit,
     onPlayers: () -> Unit,
@@ -361,7 +431,14 @@ private fun GameScreen(
                     }
                 }
             } else {
-                ChallengeCard(challenge = challenge, actor = actor)
+                ChallengeCard(
+                    challenge = challenge,
+                    actor = actor,
+                    selectedSexualPractice = game.selectedSexualPractice,
+                    sexPosition = game.currentSexPosition,
+                    onSelectSexualPractice = onSelectSexualPractice,
+                    onRerollSexPosition = onRerollSexPosition,
+                )
                 Text(
                     "Au tour de ${game.playerName(game.currentPlayerIndex)} pour le prochain bloc",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -390,7 +467,14 @@ private fun GameScreen(
 }
 
 @Composable
-private fun ChallengeCard(challenge: Challenge, actor: String?) {
+private fun ChallengeCard(
+    challenge: Challenge,
+    actor: String?,
+    selectedSexualPractice: SexualPractice? = null,
+    sexPosition: String? = null,
+    onSelectSexualPractice: ((SexualPractice) -> Unit)? = null,
+    onRerollSexPosition: (() -> Unit)? = null,
+) {
     val action = challenge.type == ChallengeType.ACTION
     val container = if (action) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
     Card(
@@ -402,6 +486,15 @@ private fun ChallengeCard(challenge: Challenge, actor: String?) {
             if (actor != null) Text("Pour $actor", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(if (action) "ACTION" else "VÉRITÉ", fontSize = 18.sp, fontWeight = FontWeight.Black, color = if (action) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary)
             Text(challenge.text, fontSize = 27.sp, lineHeight = 36.sp, fontWeight = FontWeight.SemiBold)
+            if (challenge.sexual) {
+                SexualPositionPanel(
+                    challenge = challenge,
+                    selectedPractice = selectedSexualPractice,
+                    savedPosition = sexPosition,
+                    onSelectPractice = onSelectSexualPractice,
+                    onReroll = onRerollSexPosition,
+                )
+            }
             if (action) {
                 ActionCountdown(challengeId = challenge.id, text = challenge.text)
             }
@@ -477,6 +570,83 @@ private fun formatCountdown(seconds: Int): String =
     if (seconds >= 60) "%d:%02d".format(seconds / 60, seconds % 60) else "${seconds}s"
 
 @Composable
+private fun SexualPositionPanel(
+    challenge: Challenge,
+    selectedPractice: SexualPractice?,
+    savedPosition: String?,
+    onSelectPractice: ((SexualPractice) -> Unit)?,
+    onReroll: (() -> Unit)?,
+) {
+    val initialPractice = challenge.sexualPractice?.takeUnless { it == SexualPractice.CHOICE }
+    var localPractice by remember(challenge.id) { mutableStateOf(initialPractice) }
+    var localPosition by remember(challenge.id) { mutableStateOf(SexPositionCatalog.random(initialPractice)) }
+
+    val practice = selectedPractice ?: localPractice
+    val position = savedPosition ?: localPosition
+    val choiceMode = challenge.sexualPractice == SexualPractice.CHOICE
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("POSITION ALÉATOIRE", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+
+            if (choiceMode) {
+                Text("Choisissez d'abord le type de pratique :", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val choices = listOf(
+                    SexualPractice.CARESSES_INTIMES,
+                    SexualPractice.MASTURBATION,
+                    SexualPractice.SEXE_ORAL,
+                    SexualPractice.PENETRATION,
+                )
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(choices) { candidate ->
+                        FilterChip(
+                            selected = practice == candidate,
+                            onClick = {
+                                if (onSelectPractice != null) {
+                                    onSelectPractice(candidate)
+                                } else {
+                                    localPractice = candidate
+                                    localPosition = SexPositionCatalog.random(candidate, localPosition)
+                                }
+                            },
+                            label = { Text(candidate.label) },
+                        )
+                    }
+                }
+            } else if (practice != null) {
+                Text(practice.label, fontWeight = FontWeight.SemiBold)
+            }
+
+            if (practice != null) {
+                Text(
+                    position ?: "Choisissez une pratique pour tirer une position.",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                OutlinedButton(
+                    onClick = {
+                        if (onReroll != null) {
+                            onReroll()
+                        } else {
+                            localPosition = SexPositionCatalog.random(practice, localPosition)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("AUTRE POSITION")
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun LevelProgress(currentLevel: Int, completed: Int) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
         items((1..10).toList()) { n ->
@@ -503,7 +673,11 @@ private fun LevelProgress(currentLevel: Int, completed: Int) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScreen(state: GameUiState, viewModel: TowerViewModel, onBack: () -> Unit, onCustom: () -> Unit) {
-    Scaffold(topBar = { TopAppBar(title = { Text("Paramètres") }, navigationIcon = { TextButton(onClick = onBack) { Text("Retour") } }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("Paramètres") }, navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                    }
+                }) }) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
             contentPadding = PaddingValues(bottom = 30.dp),
@@ -566,7 +740,11 @@ private fun CustomChallengesScreen(state: GameUiState, viewModel: TowerViewModel
     var addDialog by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<Challenge?>(null) }
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Mes défis") }, navigationIcon = { TextButton(onClick = onBack) { Text("Retour") } }, actions = { IconButton(onClick = { addDialog = true }) { Icon(Icons.Default.Add, "Ajouter") } }) },
+        topBar = { TopAppBar(title = { Text("Mes défis") }, navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+            }
+        }, actions = { IconButton(onClick = { addDialog = true }) { Icon(Icons.Default.Add, "Ajouter") } }) },
         floatingActionButton = { Button(onClick = { addDialog = true }) { Icon(Icons.Default.Add, null); Spacer(Modifier.size(6.dp)); Text("Ajouter") } },
     ) { padding ->
         if (state.customChallenges.isEmpty()) {
