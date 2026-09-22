@@ -657,13 +657,29 @@ private fun ChallengeCard(
                 fontWeight = FontWeight.Black,
                 color = if (action) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
             )
-            Text(challenge.text, fontSize = 27.sp, lineHeight = 36.sp, fontWeight = FontWeight.SemiBold)
-
             if (challenge.sexual && effectiveResolved != null) {
+                Text(
+                    effectiveResolved.practice.label,
+                    fontSize = 28.sp,
+                    lineHeight = 34.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    "Pratique tirée automatiquement pour ce niveau.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp,
+                )
                 SexualActionPanel(
                     resolved = effectiveResolved,
                     game = game,
                     onReroll = onRerollSexPosition,
+                )
+            } else {
+                Text(
+                    challenge.text,
+                    fontSize = 27.sp,
+                    lineHeight = 36.sp,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
 

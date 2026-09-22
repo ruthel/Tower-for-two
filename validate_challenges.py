@@ -45,3 +45,13 @@ print("OK: 150 challenges, 30 positions, 5 variants per position")
 print("Intensities:", Counter(x["intensity"] for x in data))
 print("Sexual actions:", len(sexual))
 print("Sex-related prompts:", sum(bool(x.get("sexRelated", False)) for x in data))
+
+action_texts = [x["text"] for x in data if x["slot"] == 1]
+assert len(action_texts) == len(set(action_texts)), "All ACTION variants must have unique text"
+
+for level in range(1, 10):
+    nonsexual_actions = [x for x in data if x["level"] == level and x["slot"] == 1 and not x.get("sexRelated", False)]
+    if nonsexual_actions:
+        assert len({x["text"] for x in nonsexual_actions}) == len(nonsexual_actions), f"Repeated ACTION wording at level {level}"
+
+print("Unique ACTION texts:", len(set(action_texts)))
