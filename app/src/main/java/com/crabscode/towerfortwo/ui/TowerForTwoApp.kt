@@ -1,5 +1,10 @@
 package com.crabscode.towerfortwo.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,6 +74,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -84,6 +91,7 @@ import com.crabscode.towerfortwo.model.ChallengeType
 import com.crabscode.towerfortwo.model.GameState
 import com.crabscode.towerfortwo.model.GameUiState
 import com.crabscode.towerfortwo.model.Intensity
+import com.crabscode.towerfortwo.model.LevelThemeCatalog
 import com.crabscode.towerfortwo.model.PlayerGender
 import com.crabscode.towerfortwo.model.ResolvedSexualAction
 import com.crabscode.towerfortwo.model.SexPositionCatalog
@@ -98,6 +106,7 @@ private object Routes {
     const val SETTINGS = "settings"
     const val CUSTOM = "custom"
     const val FALLEN = "fallen"
+    const val FINISH = "finish"
     const val FREE = "free"
 }
 
@@ -139,6 +148,9 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
                     viewModel.markTowerFallen(player)
                     navController.navigate(Routes.FALLEN)
                 },
+                onFinish = {
+                    navController.navigate(Routes.FINISH) { launchSingleTop = true }
+                },
             )
         }
         composable(Routes.SETTINGS) {
@@ -156,6 +168,26 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
                 },
                 onFreePlay = {
                     viewModel.pickFreePlay()
+                    navController.navigate(Routes.FREE)
+                },
+            )
+        }
+        composable(Routes.FINISH) {
+            FinishScreen(
+                state = state,
+                onReplay = {
+                    viewModel.replay()
+                    navController.navigate(Routes.GAME) {
+                        popUpTo(Routes.HOME)
+                        launchSingleTop = true
+                    }
+                },
+                onFreePlay = {
+                    viewModel.pickFreePlay()
+                    navController.navigate(Routes.FREE)
+                },
+                onFinalSurprise = {
+                    viewModel.pickFinalSurprise()
                     navController.navigate(Routes.FREE)
                 },
             )
@@ -458,247 +490,325 @@ private fun GameScreen(
     onCustom: () -> Unit,
     onPlayers: () -> Unit,
     onTowerFallen: (Int) -> Unit,
+    onFinish: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
     var fallenDialog by remember { mutableStateOf(false) }
+    var showLevelIntro by remember { mutableStateOf(false) }
+    var announcedLevel by remember { mutableIntStateOf(0) }
+
+    val haptic = LocalHapticFeedback.current
     val game = state.game
     val challenge = state.currentChallenge
     val level = challenge?.level ?: game.nextLevel
     val slot = challenge?.slot ?: game.nextSlot
     val actor = game.challengePlayerIndex?.let(game::playerName)
+    val levelTheme = LevelThemeCatalog.forLevel(level)
 
-    Scaffold(
-        bottomBar = {
-            if (!game.isFinished) {
+    LaunchedEffect(level, game.isFinished) {
+        if (!game.isFinished && announcedLevel != level) {
+            announcedLevel = level
+            showLevelIntro = true
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            delay(1_350)
+            showLevelIntro = false
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            bottomBar = {
                 Surface(
                     tonalElevation = 8.dp,
                     shadowElevation = 12.dp,
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        OutlinedButton(
-                            onClick = onJoker,
-                            enabled = challenge != null,
-                            modifier = Modifier.weight(1f).height(58.dp),
-                            shape = RoundedCornerShape(
-                                topStart = 28.dp,
-                                bottomStart = 28.dp,
-                                topEnd = 12.dp,
-                                bottomEnd = 12.dp,
-                            ),
-                        ) {
-                            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.size(7.dp))
-                            Text("JOKER", fontWeight = FontWeight.Bold)
-                        }
-
+                    if (game.isFinished) {
                         Button(
-                            onClick = onBlockPlaced,
-                            enabled = game.isInProgress &&
-                                !game.isFinished &&
-                                !game.isPlaced(game.targetLevel, game.targetSlot),
-                            modifier = Modifier.weight(1f).height(58.dp),
-                            shape = RoundedCornerShape(
-                                topStart = 12.dp,
-                                bottomStart = 12.dp,
-                                topEnd = 28.dp,
-                                bottomEnd = 28.dp,
-                            ),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onFinish()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 12.dp)
+                                .height(58.dp),
+                            shape = RoundedCornerShape(24.dp),
                         ) {
-                            Text(
-                                "BLOC ${game.targetSlot} POSÉ",
-                                fontWeight = FontWeight.Black,
-                                textAlign = TextAlign.Center,
-                            )
+                            Icon(Icons.Default.Check, null)
+                            Spacer(Modifier.size(8.dp))
+                            Text("VOIR LE RÉCAP", fontWeight = FontWeight.Black)
                         }
-                    }
-                }
-            }
-        },
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .imePadding(),
-            contentPadding = PaddingValues(
-                start = 18.dp,
-                end = 18.dp,
-                top = 18.dp,
-                bottom = 24.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        "NIVEAU $level",
-                        fontSize = 27.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                    Box {
-                        IconButton(onClick = { menu = true }) {
-                            Icon(Icons.Default.MoreVert, "Menu")
-                        }
-                        DropdownMenu(
-                            expanded = menu,
-                            onDismissRequest = { menu = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("La tour est tombée") },
-                                onClick = {
-                                    menu = false
-                                    fallenDialog = true
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Joueurs") },
-                                onClick = {
-                                    menu = false
-                                    onPlayers()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Défis personnalisés") },
-                                onClick = {
-                                    menu = false
-                                    onCustom()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Paramètres") },
-                                leadingIcon = { Icon(Icons.Default.Settings, null) },
-                                onClick = {
-                                    menu = false
-                                    onSettings()
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-
-            item {
-                Text(
-                    "Étage ${16 + level} — Bloc $slot/3",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 18.sp,
-                )
-            }
-
-            item {
-                LevelProgress(
-                    currentLevel = game.targetLevel,
-                    completed = game.completedLevelCount,
-                )
-            }
-
-            if (challenge == null) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth().height(250.dp),
-                        shape = RoundedCornerShape(26.dp),
-                    ) {
-                        Column(
-                            Modifier.fillMaxSize().padding(26.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Text(
-                                "Au tour de ${game.playerName(game.currentPlayerIndex)}",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Spacer(Modifier.height(14.dp))
-                            Text(
-                                "Pose un bloc au-dessus de la tour, puis appuie sur BLOC POSÉ.",
-                                textAlign = TextAlign.Center,
-                                fontSize = 23.sp,
-                                lineHeight = 31.sp,
-                            )
-                        }
-                    }
-                }
-            } else {
-                item {
-                    ChallengeCard(
-                        challenge = challenge,
-                        actor = actor,
-                        game = game,
-                        settings = state.settings,
-                        resolvedSexualAction = game.resolvedSexualAction(),
-                        onRerollSexPosition = onRerollSexPosition,
-                    )
-                }
-
-                item {
-                    Text(
-                        "Au tour de ${game.playerName(game.currentPlayerIndex)} pour le prochain bloc",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-
-            if (!game.isFinished) {
-                item {
-                    Surface(
-                        shape = RoundedCornerShape(18.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                    ) {
+                    } else {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Column {
+                            OutlinedButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onJoker()
+                                },
+                                enabled = challenge != null,
+                                modifier = Modifier.weight(1f).height(58.dp),
+                                shape = RoundedCornerShape(
+                                    topStart = 28.dp,
+                                    bottomStart = 28.dp,
+                                    topEnd = 12.dp,
+                                    bottomEnd = 12.dp,
+                                ),
+                            ) {
+                                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.size(7.dp))
+                                Text("JOKER", fontWeight = FontWeight.Bold)
+                            }
+
+                            Button(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onBlockPlaced()
+                                },
+                                enabled = game.isInProgress &&
+                                    !game.isFinished &&
+                                    !game.isPlaced(game.targetLevel, game.targetSlot),
+                                modifier = Modifier.weight(1f).height(58.dp),
+                                shape = RoundedCornerShape(
+                                    topStart = 12.dp,
+                                    bottomStart = 12.dp,
+                                    topEnd = 28.dp,
+                                    bottomEnd = 28.dp,
+                                ),
+                            ) {
                                 Text(
-                                    "Étage ${16 + game.targetLevel}",
-                                    fontWeight = FontWeight.Bold,
-                                )
-                                Text(
-                                    "${game.placedOnCurrentLevel}/3 blocs posés",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 12.sp,
+                                    "BLOC ${game.targetSlot} POSÉ",
+                                    fontWeight = FontWeight.Black,
+                                    textAlign = TextAlign.Center,
                                 )
                             }
+                        }
+                    }
+                }
+            },
+        ) { padding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .imePadding(),
+                contentPadding = PaddingValues(
+                    start = 18.dp,
+                    end = 18.dp,
+                    top = 18.dp,
+                    bottom = 24.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
-                                "Prochain · ${game.targetSlot}/3",
+                                "NIVEAU $level",
+                                fontSize = 27.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                            Text(
+                                levelTheme.title,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                levelTheme.subtitle,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 12.sp,
+                            )
+                        }
+                        Box {
+                            IconButton(onClick = { menu = true }) {
+                                Icon(Icons.Default.MoreVert, "Menu")
+                            }
+                            DropdownMenu(
+                                expanded = menu,
+                                onDismissRequest = { menu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("La tour est tombée") },
+                                    onClick = {
+                                        menu = false
+                                        fallenDialog = true
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Joueurs") },
+                                    onClick = {
+                                        menu = false
+                                        onPlayers()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Défis personnalisés") },
+                                    onClick = {
+                                        menu = false
+                                        onCustom()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Paramètres") },
+                                    leadingIcon = { Icon(Icons.Default.Settings, null) },
+                                    onClick = {
+                                        menu = false
+                                        onSettings()
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Text(
+                        "Étage ${16 + level} — Bloc $slot/3",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 18.sp,
+                    )
+                }
+
+                item {
+                    LevelProgress(
+                        currentLevel = game.targetLevel,
+                        completed = game.completedLevelCount,
+                    )
+                }
+
+                if (challenge == null) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().height(250.dp),
+                            shape = RoundedCornerShape(26.dp),
+                        ) {
+                            Column(
+                                Modifier.fillMaxSize().padding(26.dp),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Text(
+                                    "Au tour de ${game.playerName(game.currentPlayerIndex)}",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Spacer(Modifier.height(14.dp))
+                                Text(
+                                    "Pose un bloc au-dessus de la tour, puis appuie sur BLOC POSÉ.",
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 23.sp,
+                                    lineHeight = 31.sp,
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    item {
+                        ChallengeCard(
+                            challenge = challenge,
+                            actor = actor,
+                            game = game,
+                            settings = state.settings,
+                            resolvedSexualAction = game.resolvedSexualAction(),
+                            onRerollSexPosition = onRerollSexPosition,
+                        )
+                    }
+
+                    if (!game.isFinished) {
+                        item {
+                            Text(
+                                "Au tour de ${game.playerName(game.currentPlayerIndex)} pour le prochain bloc",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    } else {
+                        item {
+                            Text(
+                                "Dernier défi atteint. Termine-le puis ouvre le récapitulatif.",
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.SemiBold,
                             )
                         }
                     }
                 }
 
-                if (game.targetLevel < 10) {
+                if (!game.isFinished) {
                     item {
-                        OutlinedButton(
-                            onClick = onNextFloor,
-                            enabled = game.canAdvanceFloor,
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                        Surface(
                             shape = RoundedCornerShape(18.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                         ) {
-                            Text("PASSER À L'ÉTAGE SUIVANT")
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Column {
+                                    Text(
+                                        "Étage ${16 + game.targetLevel}",
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Text(
+                                        "${game.placedOnCurrentLevel}/3 blocs posés",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 12.sp,
+                                    )
+                                }
+                                Text(
+                                    "Prochain · ${game.targetSlot}/3",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
                         }
                     }
 
-                    if (!game.canAdvanceFloor) {
+                    if (game.targetLevel < 10) {
+                        item {
+                            OutlinedButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onNextFloor()
+                                },
+                                enabled = game.canAdvanceFloor,
+                                modifier = Modifier.fillMaxWidth().height(52.dp),
+                                shape = RoundedCornerShape(18.dp),
+                            ) {
+                                Text("PASSER À L'ÉTAGE SUIVANT")
+                            }
+                        }
+
+                        if (!game.canAdvanceFloor) {
+                            item {
+                                Text(
+                                    "Pose au moins 1 bloc à cet étage avant de passer au suivant.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    } else {
                         item {
                             Text(
-                                "Pose au moins 1 bloc à cet étage avant de passer au suivant.",
+                                "Dernier étage · pose les 3 blocs pour terminer la partie.",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp,
                                 modifier = Modifier.fillMaxWidth(),
@@ -706,16 +816,46 @@ private fun GameScreen(
                             )
                         }
                     }
-                } else {
-                    item {
-                        Text(
-                            "Dernier étage · pose les 3 blocs pour terminer la partie.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 12.sp,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                        )
-                    }
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = showLevelIntro,
+            modifier = Modifier.align(Alignment.Center),
+            enter = fadeIn() + scaleIn(initialScale = 0.92f),
+            exit = fadeOut() + scaleOut(targetScale = 0.96f),
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 36.dp),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                tonalElevation = 10.dp,
+                shadowElevation = 14.dp,
+            ) {
+                Column(
+                    Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        "NIVEAU $level",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Text(
+                        levelTheme.title,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Black,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        levelTheme.subtitle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         }
@@ -833,11 +973,13 @@ private fun ActionCountdown(
     text: String,
     durationOverrideSec: Int? = null,
 ) {
+    val haptic = LocalHapticFeedback.current
     val initialSeconds = remember(challengeId, text, durationOverrideSec) {
         durationOverrideSec ?: actionDurationSeconds(text)
     }
     var remaining by remember(challengeId, initialSeconds) { mutableIntStateOf(initialSeconds) }
     var running by remember(challengeId, initialSeconds) { mutableStateOf(false) }
+    var endFeedbackSent by remember(challengeId, initialSeconds) { mutableStateOf(false) }
 
     LaunchedEffect(running, remaining, challengeId) {
         if (running && remaining > 0) {
@@ -845,21 +987,54 @@ private fun ActionCountdown(
             remaining -= 1
         } else if (remaining <= 0) {
             running = false
+            if (!endFeedbackSent) {
+                endFeedbackSent = true
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                delay(120)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
         }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            if (remaining > 0) "Décompte · ${formatCountdown(remaining)}" else "Décompte terminé",
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (remaining > 0) {
+            Text(
+                "Décompte · ${formatCountdown(remaining)}",
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.primary,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Text(
+                        "TERMINÉ",
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                }
+            }
+        }
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     when {
                         remaining <= 0 -> {
                             remaining = initialSeconds
+                            endFeedbackSent = false
                             running = true
                         }
                         else -> running = !running
@@ -880,6 +1055,7 @@ private fun ActionCountdown(
                 onClick = {
                     running = false
                     remaining = initialSeconds
+                    endFeedbackSent = false
                 },
                 enabled = remaining != initialSeconds || running,
             ) {
@@ -1371,6 +1547,118 @@ private fun AddChallengeDialog(
         confirmButton = { Button(onClick = { onSave(level, slot, text, intensity, clothing, fantasy, sexual) }, enabled = text.isNotBlank()) { Text("Enregistrer") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
     )
+}
+
+@Composable
+private fun FinishScreen(
+    state: GameUiState,
+    onReplay: () -> Unit,
+    onFreePlay: () -> Unit,
+    onFinalSurprise: () -> Unit,
+) {
+    val game = state.game
+    val haptic = LocalHapticFeedback.current
+
+    LaunchedEffect(Unit) {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        delay(120)
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+
+    Scaffold { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .navigationBarsPadding(),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            item {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(64.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(34.dp),
+                            )
+                        }
+                    }
+                    Text(
+                        "TOUR TERMINÉE",
+                        fontSize = 29.sp,
+                        fontWeight = FontWeight.Black,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        "${game.player1} + ${game.player2}",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        "Vous avez atteint le niveau 10 sans faire tomber la tour.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+
+            item {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(18.dp)) {
+                        ResultLine("Blocs posés", "${game.blocksPlaced}")
+                        HorizontalDivider()
+                        ResultLine("Niveaux à 3/3", "${game.fullLevelCount}")
+                        HorizontalDivider()
+                        ResultLine("Niveaux abrégés", "${game.shortenedLevelCount}")
+                        HorizontalDivider()
+                        ResultLine("Mode", state.settings.intensity.label)
+                    }
+                }
+            }
+
+            item {
+                Button(
+                    onClick = onFinalSurprise,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(18.dp),
+                ) {
+                    Text("FINAL SURPRISE", fontWeight = FontWeight.Black)
+                }
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = onFreePlay,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("MODE LIBRE")
+                }
+            }
+
+            item {
+                TextButton(
+                    onClick = onReplay,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("REJOUER DEPUIS LE DÉBUT")
+                }
+            }
+        }
+    }
 }
 
 @Composable
