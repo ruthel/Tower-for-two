@@ -22,6 +22,9 @@ assert all(x["type"] == "ACTION" for x in sexual)
 assert all(x["slot"] == 1 for x in sexual)
 assert all(x["level"] >= 7 for x in sexual)
 assert all(x["intensity"] == "VERY_HOT" for x in sexual)
+allowed_practices = {"CARESSES_INTIMES", "MASTURBATION", "MASTURBATION_MUTUELLE", "SEXE_ORAL", "PENETRATION", "CHOICE"}
+assert all(x.get("sexualPractice") in allowed_practices for x in sexual)
+assert all("position choisie" not in x["text"].lower() for x in sexual)
 
 print("OK: 150 challenges, 30 positions, 5 variants per position")
 print("Intensities:", Counter(x["intensity"] for x in data))

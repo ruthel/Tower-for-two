@@ -12,18 +12,65 @@ enum class Intensity(val rank: Int, val label: String) {
     }
 }
 
-enum class SexualPractice(val label: String) {
-    CARESSES_INTIMES("Caresses intimes"),
-    MASTURBATION("Masturbation"),
-    MASTURBATION_MUTUELLE("Masturbation mutuelle"),
-    SEXE_ORAL("Sexe oral"),
-    PENETRATION("Pénétration"),
-    CHOICE("Au choix");
+enum class PlayerGender(val label: String) {
+    HOMME("Homme"),
+    FEMME("Femme"),
+    AUTRE("Autre"),
+    NON_PRECISE("Non précisé");
 
     companion object {
+        fun fromName(value: String?): PlayerGender =
+            entries.firstOrNull { it.name == value } ?: NON_PRECISE
+    }
+}
+
+enum class SexualPractice(val label: String, val minLevel: Int) {
+    CARESSES_INTIMES("Caresses intimes", 7),
+    MASTURBATION("Masturbation", 7),
+    MASTURBATION_MUTUELLE("Masturbation mutuelle", 8),
+    SEXE_ORAL("Sexe oral", 8),
+    PENETRATION("Pénétration", 10),
+    CHOICE("Surprise", 7);
+
+    companion object {
+        val playable: List<SexualPractice>
+            get() = entries.filterNot { it == CHOICE }
+
         fun fromName(value: String?): SexualPractice? =
             entries.firstOrNull { it.name == value }
     }
+}
+
+enum class SexStickerPose {
+    FACE_TO_FACE,
+    SIDE_BY_SIDE,
+    SPOON,
+    RECEIVER_LYING,
+    RECEIVER_SEATED,
+    KNEELING,
+    PARTNER_ON_TOP,
+    SEATED_EMBRACE,
+    STANDING_FACE_TO_FACE,
+}
+
+data class SexPositionSpec(
+    val id: String,
+    val practice: SexualPractice,
+    val label: String,
+    val setup: String,
+    val sticker: SexStickerPose,
+    val standing: Boolean = false,
+    val minLevel: Int = practice.minLevel,
+)
+
+data class ResolvedSexualAction(
+    val practice: SexualPractice,
+    val positionId: String,
+    val durationSec: Int,
+    val giverPlayerIndex: Int? = null,
+    val receiverPlayerIndex: Int? = null,
+) {
+    val mutual: Boolean get() = practice == SexualPractice.MASTURBATION_MUTUELLE
 }
 
 data class Challenge(
@@ -44,6 +91,8 @@ data class Challenge(
 data class GameState(
     val player1: String = "Joueur 1",
     val player2: String = "Joueur 2",
+    val player1Gender: PlayerGender = PlayerGender.NON_PRECISE,
+    val player2Gender: PlayerGender = PlayerGender.NON_PRECISE,
     val currentPlayerIndex: Int = 0,
     val blocksPlaced: Int = 0,
     val targetLevel: Int = 1,
@@ -53,6 +102,11 @@ data class GameState(
     val challengePlayerIndex: Int? = null,
     val selectedSexualPractice: SexualPractice? = null,
     val currentSexPosition: String? = null,
+    val currentSexDurationSec: Int = 0,
+    val sexualGiverIndex: Int? = null,
+    val sexualReceiverIndex: Int? = null,
+    val recentSexualPractices: List<String> = emptyList(),
+    val recentSexPositionIds: List<String> = emptyList(),
     val fallenByIndex: Int? = null,
     val isInProgress: Boolean = false,
     val isFinished: Boolean = false,
@@ -75,9 +129,23 @@ data class GameState(
         get() = targetLevel < 10 && hasPlacedOnLevel(targetLevel)
 
     fun playerName(index: Int): String = if (index == 0) player1 else player2
+    fun playerGender(index: Int): PlayerGender = if (index == 0) player1Gender else player2Gender
     fun positionKey(level: Int, slot: Int): String = "$level:$slot"
     fun isPlaced(level: Int, slot: Int): Boolean = positionKey(level, slot) in placedPositions
     fun hasPlacedOnLevel(level: Int): Boolean = placedPositions.any { it.startsWith("$level:") }
+
+    fun resolvedSexualAction(): ResolvedSexualAction? {
+        val practice = selectedSexualPractice ?: return null
+        val position = currentSexPosition ?: return null
+        if (currentSexDurationSec <= 0) return null
+        return ResolvedSexualAction(
+            practice = practice,
+            positionId = position,
+            durationSec = currentSexDurationSec,
+            giverPlayerIndex = sexualGiverIndex,
+            receiverPlayerIndex = sexualReceiverIndex,
+        )
+    }
 }
 
 data class AppSettings(
@@ -85,6 +153,8 @@ data class AppSettings(
     val allowClothing: Boolean = false,
     val allowFantasy: Boolean = true,
     val allowSexualPractices: Boolean = false,
+    val allowedSexualPractices: Set<SexualPractice> = SexualPractice.playable.toSet(),
+    val allowStandingSexPositions: Boolean = true,
 )
 
 data class GameUiState(

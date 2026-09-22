@@ -5,6 +5,7 @@ import com.crabscode.towerfortwo.model.AppSettings
 import com.crabscode.towerfortwo.model.Challenge
 import com.crabscode.towerfortwo.model.ChallengeType
 import com.crabscode.towerfortwo.model.Intensity
+import com.crabscode.towerfortwo.model.SexPositionCatalog
 import com.crabscode.towerfortwo.model.SexualPractice
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -89,14 +90,23 @@ class ChallengeRepository(private val context: Context) {
         settings: AppSettings,
     ): List<Challenge> {
         return all.filter { c ->
-            c.enabled &&
-                c.level == level &&
+            c.level == level &&
                 (slot == null || c.slot == slot) &&
-                c.intensity.rank <= settings.intensity.rank &&
-                (settings.allowClothing || !c.clothing) &&
-                (settings.allowFantasy || !c.fantasy) &&
-                (settings.allowSexualPractices || !c.sexual)
+                isEligibleChallenge(c, settings)
         }
+    }
+
+    fun isEligibleChallenge(c: Challenge, settings: AppSettings): Boolean {
+        if (!c.enabled || c.intensity.rank > settings.intensity.rank) return false
+        if (!settings.allowClothing && c.clothing) return false
+        if (!settings.allowFantasy && c.fantasy) return false
+        if (!c.sexual) return true
+        if (!settings.allowSexualPractices) return false
+
+        val available = SexPositionCatalog.eligiblePractices(c.level, settings)
+        if (available.isEmpty()) return false
+        val required = c.sexualPractice?.takeUnless { it == SexualPractice.CHOICE }
+        return required == null || required in available
     }
 
     private fun parse(json: String, custom: Boolean): List<Challenge> {

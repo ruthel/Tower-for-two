@@ -1,5 +1,6 @@
 package com.crabscode.towerfortwo.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,7 +64,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -73,11 +76,16 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.crabscode.towerfortwo.model.AppSettings
 import com.crabscode.towerfortwo.model.Challenge
 import com.crabscode.towerfortwo.model.ChallengeType
+import com.crabscode.towerfortwo.model.GameState
 import com.crabscode.towerfortwo.model.GameUiState
 import com.crabscode.towerfortwo.model.Intensity
+import com.crabscode.towerfortwo.model.PlayerGender
+import com.crabscode.towerfortwo.model.ResolvedSexualAction
 import com.crabscode.towerfortwo.model.SexPositionCatalog
+import com.crabscode.towerfortwo.model.SexStickerPose
 import com.crabscode.towerfortwo.model.SexualPractice
 import com.crabscode.towerfortwo.viewmodel.TowerViewModel
 import kotlinx.coroutines.delay
@@ -107,8 +115,8 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
         composable(Routes.HOME) {
             HomeScreen(
                 state = state,
-                onStart = { p1, p2 ->
-                    viewModel.startNewGame(p1, p2)
+                onStart = { p1, g1, p2, g2 ->
+                    viewModel.startNewGame(p1, g1, p2, g2)
                     navController.navigate(Routes.GAME) { launchSingleTop = true }
                 },
                 onResume = { navController.navigate(Routes.GAME) { launchSingleTop = true } },
@@ -122,7 +130,6 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
                 onSelectSlot = viewModel::selectTargetSlot,
                 onNextFloor = viewModel::nextFloor,
                 onJoker = viewModel::useJoker,
-                onSelectSexualPractice = viewModel::selectSexualPractice,
                 onRerollSexPosition = viewModel::rerollSexPosition,
                 onSettings = { navController.navigate(Routes.SETTINGS) },
                 onCustom = { navController.navigate(Routes.CUSTOM) },
@@ -165,13 +172,17 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
 @Composable
 private fun HomeScreen(
     state: GameUiState,
-    onStart: (String, String) -> Unit,
+    onStart: (String, PlayerGender, String, PlayerGender) -> Unit,
     onResume: () -> Unit,
     onSettings: () -> Unit,
 ) {
     var p1 by remember(state.game.player1) { mutableStateOf(if (state.game.player1 == "Joueur 1") "" else state.game.player1) }
     var p2 by remember(state.game.player2) { mutableStateOf(if (state.game.player2 == "Joueur 2") "" else state.game.player2) }
-    var playersValidated by remember(state.game.player1, state.game.player2) { mutableStateOf(state.game.isInProgress) }
+    var g1 by remember(state.game.player1Gender) { mutableStateOf(state.game.player1Gender) }
+    var g2 by remember(state.game.player2Gender) { mutableStateOf(state.game.player2Gender) }
+    var playersValidated by remember(state.game.player1, state.game.player2, state.game.player1Gender, state.game.player2Gender) {
+        mutableStateOf(state.game.isInProgress)
+    }
 
     val displayP1 = p1.trim().ifBlank { "Joueur 1" }
     val displayP2 = p2.trim().ifBlank { "Joueur 2" }
@@ -204,25 +215,21 @@ private fun HomeScreen(
 
             if (!playersValidated) {
                 item {
-                    OutlinedTextField(
-                        value = p1,
-                        onValueChange = { p1 = it },
-                        label = { Text("Joueur 1 (facultatif)") },
-                        placeholder = { Text("Joueur 1") },
-                        leadingIcon = { Icon(Icons.Default.Person, null) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                    PlayerEditor(
+                        number = "1",
+                        name = p1,
+                        onNameChange = { p1 = it },
+                        gender = g1,
+                        onGenderChange = { g1 = it },
                     )
                 }
                 item {
-                    OutlinedTextField(
-                        value = p2,
-                        onValueChange = { p2 = it },
-                        label = { Text("Joueur 2 (facultatif)") },
-                        placeholder = { Text("Joueur 2") },
-                        leadingIcon = { Icon(Icons.Default.Person, null) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                    PlayerEditor(
+                        number = "2",
+                        name = p2,
+                        onNameChange = { p2 = it },
+                        gender = g2,
+                        onGenderChange = { g2 = it },
                     )
                 }
                 item {
@@ -237,8 +244,8 @@ private fun HomeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        PlayerValidatedCard("1", displayP1, Modifier.weight(1f))
-                        PlayerValidatedCard("2", displayP2, Modifier.weight(1f))
+                        PlayerValidatedCard("1", displayP1, g1, Modifier.weight(1f))
+                        PlayerValidatedCard("2", displayP2, g2, Modifier.weight(1f))
                     }
                 }
                 item {
@@ -253,7 +260,7 @@ private fun HomeScreen(
                 }
                 item {
                     Button(
-                        onClick = { onStart(displayP1, displayP2) },
+                        onClick = { onStart(displayP1, g1, displayP2, g2) },
                         modifier = Modifier.fillMaxWidth().height(60.dp),
                     ) { Text(if (state.game.isInProgress) "NOUVELLE PARTIE" else "COMMENCER") }
                 }
@@ -279,7 +286,49 @@ private fun HomeScreen(
 }
 
 @Composable
-private fun PlayerValidatedCard(number: String, name: String, modifier: Modifier = Modifier) {
+private fun PlayerEditor(
+    number: String,
+    name: String,
+    onNameChange: (String) -> Unit,
+    gender: PlayerGender,
+    onGenderChange: (PlayerGender) -> Unit,
+) {
+    Card(shape = RoundedCornerShape(22.dp)) {
+        Column(
+            Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("Joueur $number", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            OutlinedTextField(
+                value = name,
+                onValueChange = onNameChange,
+                label = { Text("Prénom (facultatif)") },
+                placeholder = { Text("Joueur $number") },
+                leadingIcon = { Icon(Icons.Default.Person, null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text("Genre", fontWeight = FontWeight.SemiBold)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(PlayerGender.entries) { candidate ->
+                    FilterChip(
+                        selected = gender == candidate,
+                        onClick = { onGenderChange(candidate) },
+                        label = { Text(candidate.label) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerValidatedCard(
+    number: String,
+    name: String,
+    gender: PlayerGender,
+    modifier: Modifier = Modifier,
+) {
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(22.dp),
@@ -288,7 +337,7 @@ private fun PlayerValidatedCard(number: String, name: String, modifier: Modifier
         Column(
             Modifier.fillMaxWidth().padding(18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Surface(
                 shape = CircleShape,
@@ -300,6 +349,7 @@ private fun PlayerValidatedCard(number: String, name: String, modifier: Modifier
                 }
             }
             Text(name, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Text(gender.label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -312,7 +362,6 @@ private fun GameScreen(
     onSelectSlot: (Int) -> Unit,
     onNextFloor: () -> Unit,
     onJoker: () -> Unit,
-    onSelectSexualPractice: (SexualPractice) -> Unit,
     onRerollSexPosition: () -> Unit,
     onSettings: () -> Unit,
     onCustom: () -> Unit,
@@ -454,9 +503,9 @@ private fun GameScreen(
                     ChallengeCard(
                         challenge = challenge,
                         actor = actor,
-                        selectedSexualPractice = game.selectedSexualPractice,
-                        sexPosition = game.currentSexPosition,
-                        onSelectSexualPractice = onSelectSexualPractice,
+                        game = game,
+                        settings = state.settings,
+                        resolvedSexualAction = game.resolvedSexualAction(),
                         onRerollSexPosition = onRerollSexPosition,
                     )
                 }
@@ -492,13 +541,26 @@ private fun GameScreen(
 private fun ChallengeCard(
     challenge: Challenge,
     actor: String?,
-    selectedSexualPractice: SexualPractice? = null,
-    sexPosition: String? = null,
-    onSelectSexualPractice: ((SexualPractice) -> Unit)? = null,
+    game: GameState,
+    settings: AppSettings,
+    resolvedSexualAction: ResolvedSexualAction? = null,
     onRerollSexPosition: (() -> Unit)? = null,
 ) {
     val action = challenge.type == ChallengeType.ACTION
     val container = if (action) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+
+    val localResolved = if (challenge.sexual && resolvedSexualAction == null) {
+        remember(challenge.id) {
+            SexPositionCatalog.resolve(
+                challenge = challenge,
+                game = game,
+                settings = settings,
+                actor = game.challengePlayerIndex ?: 0,
+            )
+        }
+    } else null
+    val effectiveResolved = resolvedSexualAction ?: localResolved
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
@@ -506,29 +568,44 @@ private fun ChallengeCard(
     ) {
         Column(Modifier.padding(26.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             if (actor != null) Text("Pour $actor", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(if (action) "ACTION" else "VÉRITÉ", fontSize = 18.sp, fontWeight = FontWeight.Black, color = if (action) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary)
+            Text(
+                if (action) "ACTION" else "VÉRITÉ",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Black,
+                color = if (action) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+            )
             Text(challenge.text, fontSize = 27.sp, lineHeight = 36.sp, fontWeight = FontWeight.SemiBold)
-            if (challenge.sexual) {
-                SexualPositionPanel(
-                    challenge = challenge,
-                    selectedPractice = selectedSexualPractice,
-                    savedPosition = sexPosition,
-                    onSelectPractice = onSelectSexualPractice,
+
+            if (challenge.sexual && effectiveResolved != null) {
+                SexualActionPanel(
+                    resolved = effectiveResolved,
+                    game = game,
                     onReroll = onRerollSexPosition,
                 )
             }
+
             if (action) {
-                ActionCountdown(challengeId = challenge.id, text = challenge.text)
+                ActionCountdown(
+                    challengeId = challenge.id,
+                    text = challenge.text,
+                    durationOverrideSec = effectiveResolved?.durationSec,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ActionCountdown(challengeId: String, text: String) {
-    val initialSeconds = remember(challengeId, text) { actionDurationSeconds(text) }
-    var remaining by remember(challengeId) { mutableIntStateOf(initialSeconds) }
-    var running by remember(challengeId) { mutableStateOf(false) }
+private fun ActionCountdown(
+    challengeId: String,
+    text: String,
+    durationOverrideSec: Int? = null,
+) {
+    val initialSeconds = remember(challengeId, text, durationOverrideSec) {
+        durationOverrideSec ?: actionDurationSeconds(text)
+    }
+    var remaining by remember(challengeId, initialSeconds) { mutableIntStateOf(initialSeconds) }
+    var running by remember(challengeId, initialSeconds) { mutableStateOf(false) }
 
     LaunchedEffect(running, remaining, challengeId) {
         if (running && remaining > 0) {
@@ -592,77 +669,139 @@ private fun formatCountdown(seconds: Int): String =
     if (seconds >= 60) "%d:%02d".format(seconds / 60, seconds % 60) else "${seconds}s"
 
 @Composable
-private fun SexualPositionPanel(
-    challenge: Challenge,
-    selectedPractice: SexualPractice?,
-    savedPosition: String?,
-    onSelectPractice: ((SexualPractice) -> Unit)?,
+private fun SexualActionPanel(
+    resolved: ResolvedSexualAction,
+    game: GameState,
     onReroll: (() -> Unit)?,
 ) {
-    val initialPractice = challenge.sexualPractice?.takeUnless { it == SexualPractice.CHOICE }
-    var localPractice by remember(challenge.id) { mutableStateOf(initialPractice) }
-    var localPosition by remember(challenge.id) { mutableStateOf(SexPositionCatalog.random(initialPractice)) }
-
-    val practice = selectedPractice ?: localPractice
-    val position = savedPosition ?: localPosition
-    val choiceMode = challenge.sexualPractice == SexualPractice.CHOICE
+    val position = SexPositionCatalog.position(resolved.positionId) ?: return
+    val instruction = SexPositionCatalog.instruction(resolved, game)
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(22.dp),
     ) {
         Column(
             Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("POSITION ALÉATOIRE", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+            Text("MISE EN PRATIQUE", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+            Text(resolved.practice.label, fontWeight = FontWeight.Bold, fontSize = 18.sp)
 
-            if (choiceMode) {
-                Text("Choisissez d'abord le type de pratique :", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                val choices = listOf(
-                    SexualPractice.CARESSES_INTIMES,
-                    SexualPractice.MASTURBATION,
-                    SexualPractice.SEXE_ORAL,
-                    SexualPractice.PENETRATION,
+            SexPositionSticker(position.sticker)
+
+            Text(position.label, fontSize = 21.sp, fontWeight = FontWeight.Black)
+
+            if (resolved.mutual) {
+                Text(
+                    "${game.player1} + ${game.player2} · ${SexPositionCatalog.durationLabel(resolved.durationSec)}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
                 )
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(choices) { candidate ->
-                        FilterChip(
-                            selected = practice == candidate,
-                            onClick = {
-                                if (onSelectPractice != null) {
-                                    onSelectPractice(candidate)
-                                } else {
-                                    localPractice = candidate
-                                    localPosition = SexPositionCatalog.random(candidate, localPosition)
-                                }
-                            },
-                            label = { Text(candidate.label) },
-                        )
-                    }
-                }
-            } else if (practice != null) {
-                Text(practice.label, fontWeight = FontWeight.SemiBold)
+            } else {
+                val giver = resolved.giverPlayerIndex?.let(game::playerName) ?: game.player1
+                val receiver = resolved.receiverPlayerIndex?.let(game::playerName) ?: game.player2
+                Text(
+                    "$giver → $receiver · ${SexPositionCatalog.durationLabel(resolved.durationSec)}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
 
-            if (practice != null) {
-                Text(
-                    position ?: "Choisissez une pratique pour tirer une position.",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                )
+            Text(instruction, lineHeight = 23.sp)
+
+            Text(
+                "Commencez uniquement si vous êtes tous les deux d'accord. Chacun peut ralentir ou arrêter à tout moment.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (onReroll != null) {
                 OutlinedButton(
-                    onClick = {
-                        if (onReroll != null) {
-                            onReroll()
-                        } else {
-                            localPosition = SexPositionCatalog.random(practice, localPosition)
-                        }
-                    },
+                    onClick = onReroll,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("AUTRE POSITION")
+                    Icon(Icons.Default.Refresh, null)
+                    Spacer(Modifier.size(8.dp))
+                    Text("AUTRE TIRAGE")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SexPositionSticker(pose: SexStickerPose) {
+    val first = MaterialTheme.colorScheme.primary
+    val second = MaterialTheme.colorScheme.secondary
+    val outline = MaterialTheme.colorScheme.onSurface
+
+    Canvas(
+        modifier = Modifier.fillMaxWidth().height(150.dp),
+    ) {
+        val w = size.width
+        val h = size.height
+
+        fun dot(center: Offset, color: Color) {
+            drawCircle(outline, radius = 17f, center = center)
+            drawCircle(color, radius = 11f, center = center)
+        }
+
+        fun segment(a: Offset, b: Offset, color: Color) {
+            drawLine(outline, a, b, strokeWidth = 24f, cap = StrokeCap.Round)
+            drawLine(color, a, b, strokeWidth = 14f, cap = StrokeCap.Round)
+        }
+
+        fun person(
+            head: Offset,
+            shoulder: Offset,
+            hip: Offset,
+            foot1: Offset,
+            foot2: Offset,
+            hand1: Offset,
+            hand2: Offset,
+            color: Color,
+        ) {
+            dot(head, color)
+            segment(shoulder, hip, color)
+            segment(shoulder, hand1, color)
+            segment(shoulder, hand2, color)
+            segment(hip, foot1, color)
+            segment(hip, foot2, color)
+        }
+
+        when (pose) {
+            SexStickerPose.FACE_TO_FACE, SexStickerPose.SEATED_EMBRACE -> {
+                person(Offset(w*.32f,h*.25f),Offset(w*.34f,h*.40f),Offset(w*.37f,h*.67f),Offset(w*.24f,h*.86f),Offset(w*.48f,h*.86f),Offset(w*.48f,h*.53f),Offset(w*.43f,h*.62f),first)
+                person(Offset(w*.68f,h*.25f),Offset(w*.66f,h*.40f),Offset(w*.63f,h*.67f),Offset(w*.52f,h*.86f),Offset(w*.76f,h*.86f),Offset(w*.52f,h*.53f),Offset(w*.57f,h*.62f),second)
+            }
+            SexStickerPose.SIDE_BY_SIDE -> {
+                person(Offset(w*.20f,h*.38f),Offset(w*.32f,h*.43f),Offset(w*.52f,h*.50f),Offset(w*.72f,h*.56f),Offset(w*.74f,h*.70f),Offset(w*.42f,h*.28f),Offset(w*.48f,h*.64f),first)
+                person(Offset(w*.26f,h*.64f),Offset(w*.38f,h*.66f),Offset(w*.58f,h*.70f),Offset(w*.78f,h*.72f),Offset(w*.78f,h*.86f),Offset(w*.48f,h*.54f),Offset(w*.50f,h*.80f),second)
+            }
+            SexStickerPose.SPOON -> {
+                person(Offset(w*.22f,h*.34f),Offset(w*.34f,h*.40f),Offset(w*.54f,h*.50f),Offset(w*.75f,h*.62f),Offset(w*.70f,h*.78f),Offset(w*.44f,h*.30f),Offset(w*.48f,h*.60f),first)
+                person(Offset(w*.28f,h*.56f),Offset(w*.40f,h*.58f),Offset(w*.58f,h*.62f),Offset(w*.78f,h*.70f),Offset(w*.74f,h*.86f),Offset(w*.49f,h*.48f),Offset(w*.52f,h*.72f),second)
+            }
+            SexStickerPose.RECEIVER_LYING -> {
+                person(Offset(w*.17f,h*.68f),Offset(w*.30f,h*.66f),Offset(w*.55f,h*.68f),Offset(w*.79f,h*.64f),Offset(w*.80f,h*.80f),Offset(w*.42f,h*.54f),Offset(w*.43f,h*.78f),second)
+                person(Offset(w*.63f,h*.22f),Offset(w*.62f,h*.38f),Offset(w*.58f,h*.60f),Offset(w*.48f,h*.84f),Offset(w*.68f,h*.84f),Offset(w*.50f,h*.52f),Offset(w*.72f,h*.50f),first)
+            }
+            SexStickerPose.RECEIVER_SEATED -> {
+                person(Offset(w*.64f,h*.24f),Offset(w*.62f,h*.40f),Offset(w*.60f,h*.64f),Offset(w*.48f,h*.86f),Offset(w*.73f,h*.86f),Offset(w*.50f,h*.52f),Offset(w*.72f,h*.50f),second)
+                person(Offset(w*.34f,h*.55f),Offset(w*.38f,h*.68f),Offset(w*.45f,h*.80f),Offset(w*.35f,h*.92f),Offset(w*.55f,h*.92f),Offset(w*.49f,h*.62f),Offset(w*.52f,h*.74f),first)
+            }
+            SexStickerPose.KNEELING -> {
+                person(Offset(w*.67f,h*.18f),Offset(w*.66f,h*.34f),Offset(w*.65f,h*.58f),Offset(w*.60f,h*.88f),Offset(w*.73f,h*.88f),Offset(w*.55f,h*.48f),Offset(w*.76f,h*.48f),second)
+                person(Offset(w*.36f,h*.56f),Offset(w*.40f,h*.68f),Offset(w*.46f,h*.80f),Offset(w*.33f,h*.92f),Offset(w*.56f,h*.92f),Offset(w*.51f,h*.60f),Offset(w*.52f,h*.74f),first)
+            }
+            SexStickerPose.PARTNER_ON_TOP -> {
+                person(Offset(w*.19f,h*.72f),Offset(w*.32f,h*.68f),Offset(w*.56f,h*.68f),Offset(w*.80f,h*.66f),Offset(w*.80f,h*.82f),Offset(w*.44f,h*.56f),Offset(w*.45f,h*.78f),first)
+                person(Offset(w*.52f,h*.18f),Offset(w*.53f,h*.34f),Offset(w*.53f,h*.57f),Offset(w*.39f,h*.80f),Offset(w*.67f,h*.80f),Offset(w*.41f,h*.48f),Offset(w*.65f,h*.48f),second)
+            }
+            SexStickerPose.STANDING_FACE_TO_FACE -> {
+                person(Offset(w*.36f,h*.18f),Offset(w*.38f,h*.34f),Offset(w*.40f,h*.60f),Offset(w*.32f,h*.90f),Offset(w*.48f,h*.90f),Offset(w*.52f,h*.46f),Offset(w*.50f,h*.58f),first)
+                person(Offset(w*.64f,h*.18f),Offset(w*.62f,h*.34f),Offset(w*.60f,h*.60f),Offset(w*.52f,h*.90f),Offset(w*.68f,h*.90f),Offset(w*.48f,h*.46f),Offset(w*.50f,h*.58f),second)
             }
         }
     }
@@ -719,17 +858,40 @@ private fun SettingsScreen(state: GameUiState, viewModel: TowerViewModel, onBack
             item { SettingSwitch("Autoriser les défis avec retrait de vêtements", state.settings.allowClothing, viewModel::setAllowClothing) }
             item { SettingSwitch("Questions sur les fantasmes", state.settings.allowFantasy, viewModel::setAllowFantasy) }
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SettingSwitch(
                         "Pratiques sexuelles — mode adulte",
                         state.settings.allowSexualPractices,
                         viewModel::setAllowSexualPractices,
                     )
                     Text(
-                        "Ajoute des variantes Très torride aux niveaux 7–10. Désactivé par défaut ; Joker et arrêt restent toujours possibles.",
+                        "L'app choisit automatiquement la pratique, les rôles, une position compatible et la durée. Désactivé par défaut.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                     )
+                }
+            }
+            if (state.settings.allowSexualPractices) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Pratiques autorisées", fontWeight = FontWeight.Bold)
+                        Text(
+                            "Le genre des joueurs ne détermine jamais les pratiques. Seules les options activées ici peuvent être tirées.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp,
+                        )
+                        SexualPractice.playable.forEach { practice ->
+                            SettingSwitch(
+                                practice.label,
+                                practice in state.settings.allowedSexualPractices,
+                            ) { enabled -> viewModel.setSexualPracticeAllowed(practice, enabled) }
+                        }
+                        SettingSwitch(
+                            "Autoriser les positions debout",
+                            state.settings.allowStandingSexPositions,
+                            viewModel::setAllowStandingSexPositions,
+                        )
+                    }
                 }
             }
             item { HorizontalDivider() }
@@ -1070,7 +1232,14 @@ private fun FreePlayScreen(state: GameUiState, onNext: () -> Unit, onReplay: () 
             Text("MODE LIBRE", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black)
             Text("Uniquement parmi les niveaux déjà débloqués.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(20.dp))
-            if (challenge != null) ChallengeCard(challenge, actor = null) else Text("Appuie sur AUTRE DÉFI pour commencer.")
+            if (challenge != null) {
+                ChallengeCard(
+                    challenge = challenge,
+                    actor = null,
+                    game = state.game,
+                    settings = state.settings,
+                )
+            } else Text("Appuie sur AUTRE DÉFI pour commencer.")
         }
     }
 }
