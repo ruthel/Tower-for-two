@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,6 +77,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -85,6 +87,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.crabscode.towerfortwo.R
 import com.crabscode.towerfortwo.model.AppSettings
 import com.crabscode.towerfortwo.model.Challenge
 import com.crabscode.towerfortwo.model.ChallengeType
@@ -101,6 +104,7 @@ import com.crabscode.towerfortwo.viewmodel.TowerViewModel
 import kotlinx.coroutines.delay
 
 private object Routes {
+    const val INTRO = "intro"
     const val HOME = "home"
     const val GAME = "game"
     const val SETTINGS = "settings"
@@ -116,13 +120,42 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
     val navController = rememberNavController()
 
     if (!state.loaded) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
+        BrandedLoadingScreen()
         return
     }
 
-    NavHost(navController = navController, startDestination = Routes.HOME) {
+    val startDestination = when {
+        !state.settings.onboardingCompleted -> Routes.INTRO
+        state.game.isFinished -> Routes.FINISH
+        state.game.fallenByIndex != null && !state.game.isInProgress -> Routes.FALLEN
+        else -> Routes.HOME
+    }
+
+    fun goHome() {
+        val popped = navController.popBackStack(Routes.HOME, inclusive = false)
+        if (!popped) {
+            navController.navigate(Routes.HOME) {
+                launchSingleTop = true
+                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+            }
+        }
+    }
+
+    NavHost(navController = navController, startDestination = startDestination) {
+        composable(Routes.INTRO) {
+            IntroScreen(
+                initialPage = state.settings.onboardingPage,
+                onPageChanged = viewModel::setOnboardingPage,
+                onComplete = {
+                    viewModel.completeOnboarding()
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.INTRO) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+
         composable(Routes.HOME) {
             HomeScreen(
                 state = state,
@@ -130,10 +163,16 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
                     viewModel.startNewGame(p1, g1, p2, g2)
                     navController.navigate(Routes.GAME) { launchSingleTop = true }
                 },
-                onResume = { navController.navigate(Routes.GAME) { launchSingleTop = true } },
-                onSettings = { navController.navigate(Routes.SETTINGS) },
+                onResume = {
+                    navController.navigate(Routes.GAME) { launchSingleTop = true }
+                },
+                onSettings = {
+                    navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
+                },
+                onSavePlayerSetup = viewModel::savePlayerSetup,
             )
         }
+
         composable(Routes.GAME) {
             GameScreen(
                 state = state,
@@ -141,62 +180,313 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
                 onNextFloor = viewModel::nextFloor,
                 onJoker = viewModel::useJoker,
                 onRerollSexPosition = viewModel::rerollSexPosition,
-                onSettings = { navController.navigate(Routes.SETTINGS) },
-                onCustom = { navController.navigate(Routes.CUSTOM) },
-                onPlayers = { navController.navigate(Routes.HOME) },
+                onSettings = {
+                    navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
+                },
+                onCustom = {
+                    navController.navigate(Routes.CUSTOM) { launchSingleTop = true }
+                },
+                onPlayers = { goHome() },
                 onTowerFallen = { player ->
                     viewModel.markTowerFallen(player)
-                    navController.navigate(Routes.FALLEN)
+                    navController.navigate(Routes.FALLEN) {
+                        launchSingleTop = true
+                    }
                 },
                 onFinish = {
                     navController.navigate(Routes.FINISH) { launchSingleTop = true }
                 },
             )
         }
+
         composable(Routes.SETTINGS) {
-            SettingsScreen(state, viewModel, onBack = { navController.popBackStack() }, onCustom = { navController.navigate(Routes.CUSTOM) })
+            SettingsScreen(
+                state = state,
+                viewModel = viewModel,
+                onBack = {
+                    if (!navController.popBackStack()) goHome()
+                },
+                onCustom = {
+                    navController.navigate(Routes.CUSTOM) { launchSingleTop = true }
+                },
+            )
         }
+
         composable(Routes.CUSTOM) {
-            CustomChallengesScreen(state, viewModel, onBack = { navController.popBackStack() })
+            CustomChallengesScreen(
+                state = state,
+                viewModel = viewModel,
+                onBack = {
+                    if (!navController.popBackStack()) goHome()
+                },
+            )
         }
+
         composable(Routes.FALLEN) {
             FallenScreen(
                 state = state,
                 onReplay = {
                     viewModel.replay()
-                    navController.navigate(Routes.GAME) { popUpTo(Routes.HOME); launchSingleTop = true }
+                    navController.navigate(Routes.GAME) {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 },
                 onFreePlay = {
                     viewModel.pickFreePlay()
-                    navController.navigate(Routes.FREE)
+                    navController.navigate(Routes.FREE) { launchSingleTop = true }
                 },
             )
         }
+
         composable(Routes.FINISH) {
             FinishScreen(
                 state = state,
                 onReplay = {
                     viewModel.replay()
                     navController.navigate(Routes.GAME) {
-                        popUpTo(Routes.HOME)
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
                         launchSingleTop = true
                     }
                 },
                 onFreePlay = {
                     viewModel.pickFreePlay()
-                    navController.navigate(Routes.FREE)
+                    navController.navigate(Routes.FREE) { launchSingleTop = true }
                 },
                 onFinalSurprise = {
                     viewModel.pickFinalSurprise()
-                    navController.navigate(Routes.FREE)
+                    navController.navigate(Routes.FREE) { launchSingleTop = true }
                 },
             )
         }
+
         composable(Routes.FREE) {
-            FreePlayScreen(state, onNext = viewModel::pickFreePlay, onReplay = {
-                viewModel.replay()
-                navController.navigate(Routes.GAME) { popUpTo(Routes.HOME); launchSingleTop = true }
-            })
+            FreePlayScreen(
+                state = state,
+                onNext = viewModel::pickFreePlay,
+                onReplay = {
+                    viewModel.replay()
+                    navController.navigate(Routes.GAME) {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun BrandedLoadingScreen() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_launcher_art),
+                contentDescription = null,
+                modifier = Modifier.size(112.dp),
+            )
+            Text(
+                "TOWER FOR TWO",
+                fontSize = 25.sp,
+                fontWeight = FontWeight.Black,
+            )
+            Text(
+                "Une tour. Deux joueurs.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 13.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun IntroScreen(
+    initialPage: Int,
+    onPageChanged: (Int) -> Unit,
+    onComplete: () -> Unit,
+) {
+    var page by remember { mutableIntStateOf(initialPage.coerceIn(0, 3)) }
+
+    val title = when (page) {
+        0 -> "Bienvenue dans Tower for Two"
+        1 -> "Une règle simple"
+        2 -> "Une progression qui monte"
+        else -> "Privé, consenti, local"
+    }
+    val description = when (page) {
+        0 -> "Un jeu de tour pensé pour deux adultes consentants : des défis, des vérités et une montée progressive de l'intimité."
+        1 -> "Commencez avec 16 étages. Retirez un bloc, réalisez le défi, puis replacez-le au sommet. Chaque nouvel étage accepte jusqu'à 3 blocs, et vous pouvez avancer après en avoir posé au moins un."
+        2 -> "Les 10 niveaux passent de la complicité à l'intimité. Le mode Sensuel réserve le final sexuel au niveau 10, Torride aux niveaux 9–10, et Très torride aux niveaux 8–10."
+        else -> "Aucun compte, aucune publicité et aucun serveur. Les joueurs, réglages, progression, historique et défis personnalisés restent sur cet appareil. Un Joker est toujours disponible et chacun peut arrêter une action à tout moment."
+    }
+    val kicker = when (page) {
+        0 -> "POUR DEUX"
+        1 -> "COMMENT JOUER"
+        2 -> "10 NIVEAUX"
+        else -> "CONFIDENTIALITÉ"
+    }
+
+    Scaffold { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 22.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                if (page < 3) {
+                    TextButton(onClick = onComplete) {
+                        Text("PASSER")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                ) {
+                    if (page == 0) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_launcher_art),
+                            contentDescription = null,
+                            modifier = Modifier.size(144.dp),
+                        )
+                    } else {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(120.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    when (page) {
+                                        1 -> "16 → 26"
+                                        2 -> "1 — 10"
+                                        else -> "100%"
+                                    },
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = if (page == 1) 24.sp else 29.sp,
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        kicker,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 12.sp,
+                    )
+                    Text(
+                        title,
+                        textAlign = TextAlign.Center,
+                        fontSize = 30.sp,
+                        lineHeight = 36.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Text(
+                        description,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 16.sp,
+                        lineHeight = 24.sp,
+                    )
+
+                    if (page == 3) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                        ) {
+                            Text(
+                                "Réservé aux adultes consentants.",
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                repeat(4) { index ->
+                    Surface(
+                        shape = CircleShape,
+                        color = if (index == page) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f)
+                        },
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .size(
+                                width = if (index == page) 24.dp else 8.dp,
+                                height = 8.dp,
+                            ),
+                    ) {}
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                if (page > 0) {
+                    OutlinedButton(
+                        onClick = {
+                            page -= 1
+                            onPageChanged(page)
+                        },
+                        modifier = Modifier.weight(1f).height(54.dp),
+                        shape = RoundedCornerShape(18.dp),
+                    ) {
+                        Text("PRÉCÉDENT")
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        if (page == 3) {
+                            onComplete()
+                        } else {
+                            page += 1
+                            onPageChanged(page)
+                        }
+                    },
+                    modifier = Modifier.weight(1f).height(54.dp),
+                    shape = RoundedCornerShape(18.dp),
+                ) {
+                    Text(
+                        if (page == 3) "COMMENCER" else "SUIVANT",
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
         }
     }
 }
@@ -208,21 +498,19 @@ private fun HomeScreen(
     onStart: (String, PlayerGender, String, PlayerGender) -> Unit,
     onResume: () -> Unit,
     onSettings: () -> Unit,
+    onSavePlayerSetup: (String, PlayerGender, String, PlayerGender, Boolean) -> Unit,
 ) {
-    var p1 by remember(state.game.player1) {
+    var p1 by remember {
         mutableStateOf(if (state.game.player1 == "Joueur 1") "" else state.game.player1)
     }
-    var p2 by remember(state.game.player2) {
+    var p2 by remember {
         mutableStateOf(if (state.game.player2 == "Joueur 2") "" else state.game.player2)
     }
-    var g1 by remember(state.game.player1Gender) { mutableStateOf(state.game.player1Gender) }
-    var g2 by remember(state.game.player2Gender) { mutableStateOf(state.game.player2Gender) }
-    var playersValidated by remember(
-        state.game.player1,
-        state.game.player2,
-        state.game.player1Gender,
-        state.game.player2Gender,
-    ) { mutableStateOf(state.game.isInProgress) }
+    var g1 by remember { mutableStateOf(state.game.player1Gender) }
+    var g2 by remember { mutableStateOf(state.game.player2Gender) }
+    var playersValidated by remember {
+        mutableStateOf(state.game.playerSetupValidated || state.game.isInProgress)
+    }
 
     val displayP1 = p1.trim().ifBlank { "Joueur 1" }
     val displayP2 = p2.trim().ifBlank { "Joueur 2" }
@@ -279,23 +567,38 @@ private fun HomeScreen(
                     PlayerEditor(
                         number = "1",
                         name = p1,
-                        onNameChange = { p1 = it },
+                        onNameChange = {
+                            p1 = it
+                            onSavePlayerSetup(it, g1, p2, g2, false)
+                        },
                         gender = g1,
-                        onGenderChange = { g1 = it },
+                        onGenderChange = {
+                            g1 = it
+                            onSavePlayerSetup(p1, it, p2, g2, false)
+                        },
                     )
                 }
                 item {
                     PlayerEditor(
                         number = "2",
                         name = p2,
-                        onNameChange = { p2 = it },
+                        onNameChange = {
+                            p2 = it
+                            onSavePlayerSetup(p1, g1, it, g2, false)
+                        },
                         gender = g2,
-                        onGenderChange = { g2 = it },
+                        onGenderChange = {
+                            g2 = it
+                            onSavePlayerSetup(p1, g1, p2, it, false)
+                        },
                     )
                 }
                 item {
                     Button(
-                        onClick = { playersValidated = true },
+                        onClick = {
+                            playersValidated = true
+                            onSavePlayerSetup(p1, g1, p2, g2, true)
+                        },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(18.dp),
                     ) {
@@ -318,7 +621,10 @@ private fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         OutlinedButton(
-                            onClick = { playersValidated = false },
+                            onClick = {
+                                playersValidated = false
+                                onSavePlayerSetup(p1, g1, p2, g2, false)
+                            },
                             modifier = Modifier.weight(1f),
                         ) {
                             Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
