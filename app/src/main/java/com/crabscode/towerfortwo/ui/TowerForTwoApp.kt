@@ -1244,11 +1244,40 @@ private fun ChallengeCard(
     settings: AppSettings,
     resolvedSexualAction: ResolvedSexualAction? = null,
     onRerollSexPosition: (() -> Unit)? = null,
+    onReject: (() -> Unit)? = null,
     countdownGame: GameState? = null,
     onPersistCountdown: ((String, Int, Int, Boolean) -> Unit)? = null,
 ) {
     val action = challenge.type == ChallengeType.ACTION
-    val container = if (action) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+    val finalCard = settings.isSexualFinalLevel(challenge.level)
+
+    val gradient = when {
+        finalCard -> Brush.linearGradient(
+            listOf(
+                Color(0xFF5A1736),
+                Color(0xFF3A1D52),
+                Color(0xFF20111F),
+            )
+        )
+        action -> Brush.linearGradient(
+            listOf(
+                Color(0xFF5B1B35),
+                Color(0xFF2B131D),
+            )
+        )
+        else -> Brush.linearGradient(
+            listOf(
+                Color(0xFF42245A),
+                Color(0xFF21162B),
+            )
+        )
+    }
+
+    val accent = when {
+        finalCard -> MaterialTheme.colorScheme.tertiary
+        action -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.secondary
+    }
 
     val localResolved = if (challenge.sexual && resolvedSexualAction == null) {
         remember(challenge.id) {
@@ -1262,31 +1291,65 @@ private fun ChallengeCard(
     } else null
     val effectiveResolved = resolvedSexualAction ?: localResolved
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = container),
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                brush = gradient,
+                shape = RoundedCornerShape(28.dp),
+            ),
     ) {
-        Column(Modifier.padding(26.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            if (actor != null) Text("Pour $actor", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                if (action) "ACTION" else "VÉRITÉ",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Black,
-                color = if (action) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-            )
+        Column(
+            Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(
+                        if (finalCard) {
+                            "FINAL · ${if (action) "ACTION" else "VÉRITÉ"}"
+                        } else {
+                            if (action) "ACTION" else "VÉRITÉ"
+                        },
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
+                        color = accent,
+                    )
+                    actor?.let {
+                        Text(
+                            "Pour $it",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 13.sp,
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = accent.copy(alpha = 0.14f),
+                ) {
+                    Text(
+                        "N${challenge.level}",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        color = accent,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                    )
+                }
+            }
+
             if (challenge.sexual && effectiveResolved != null) {
                 Text(
                     effectiveResolved.practice.label,
-                    fontSize = 28.sp,
-                    lineHeight = 34.sp,
+                    fontSize = 27.sp,
+                    lineHeight = 33.sp,
                     fontWeight = FontWeight.Black,
                 )
-                Text(
-                    "Pratique tirée automatiquement pour ce niveau.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp,
-                )
+
                 SexualActionPanel(
                     resolved = effectiveResolved,
                     game = game,
@@ -1295,8 +1358,8 @@ private fun ChallengeCard(
             } else {
                 Text(
                     challenge.text,
-                    fontSize = 27.sp,
-                    lineHeight = 36.sp,
+                    fontSize = 25.sp,
+                    lineHeight = 34.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
@@ -1308,7 +1371,27 @@ private fun ChallengeCard(
                     durationOverrideSec = effectiveResolved?.durationSec,
                     game = countdownGame,
                     onPersistCountdown = onPersistCountdown,
+                    hapticsEnabled = settings.hapticsEnabled,
+                    soundEnabled = settings.soundEnabled,
                 )
+            }
+
+            if (onReject != null) {
+                HorizontalDivider(
+                    thickness = 1.dp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+                )
+                TextButton(
+                    onClick = onReject,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = null)
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        "PAS POUR NOUS",
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
         }
     }
