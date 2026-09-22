@@ -84,7 +84,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             )
             _uiState.update { it.copy(freePlayChallenge = null) }
             preferences.saveGame(game)
-            val stats = _uiState.value.stats
+            val stats = preferences.statsFlow.value
             preferences.saveStats(stats.copy(gamesStarted = stats.gamesStarted + 1))
         }
     }
@@ -179,7 +179,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         updated = applyResolvedAction(updated, resolved)
         viewModelScope.launch {
             preferences.saveGame(updated)
-            val stats = _uiState.value.stats
+            val stats = preferences.statsFlow.value
             preferences.saveStats(
                 stats.copy(
                     blocksPlaced = stats.blocksPlaced + 1,
@@ -291,7 +291,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         updated = applyResolvedAction(updated, resolved)
         viewModelScope.launch {
             preferences.saveGame(updated)
-            val stats = _uiState.value.stats
+            val stats = preferences.statsFlow.value
             preferences.saveStats(stats.copy(jokersUsed = stats.jokersUsed + 1))
         }
     }
@@ -331,7 +331,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             preferences.saveSettings(updatedSettings)
             preferences.saveGame(updatedGame)
-            val stats = _uiState.value.stats
+            val stats = preferences.statsFlow.value
             preferences.saveStats(stats.copy(rejectedChallenges = stats.rejectedChallenges + 1))
         }
     }
@@ -349,7 +349,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             preferences.saveSettings(updatedSettings)
-            val stats = _uiState.value.stats
+            val stats = preferences.statsFlow.value
             preferences.saveStats(stats.copy(rejectedChallenges = stats.rejectedChallenges + 1))
         }
         chooseFreePlayChallenge(pool)
@@ -364,7 +364,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
                     isInProgress = false,
                 )
             )
-            val stats = _uiState.value.stats
+            val stats = preferences.statsFlow.value
             preferences.saveStats(stats.copy(towersFallen = stats.towersFallen + 1))
         }
     }
@@ -408,7 +408,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
                     recentChallengeIds = (state.game.recentChallengeIds + chosen.id).takeLast(50),
                 )
             )
-            val stats = _uiState.value.stats
+            val stats = preferences.statsFlow.value
             preferences.saveStats(stats.copy(freePlayDraws = stats.freePlayDraws + 1))
         }
     }
@@ -538,7 +538,8 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
                 it.slot == slot &&
                 it.id != excludeId
         }
-        return sameCell.randomOrNull()
+        val nonRejected = sameCell.filterNot { it.id in settings.rejectedChallengeIds }
+        return nonRejected.ifEmpty { sameCell }.randomOrNull()
     }
 
     private fun applyResolvedAction(game: GameState, resolved: ResolvedSexualAction?): GameState {
