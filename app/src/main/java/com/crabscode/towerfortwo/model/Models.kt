@@ -108,6 +108,7 @@ data class GameState(
     val sexualReceiverIndex: Int? = null,
     val recentSexualPractices: List<String> = emptyList(),
     val recentSexPositionIds: List<String> = emptyList(),
+    val recentChallengeIds: List<String> = emptyList(),
     val fallenByIndex: Int? = null,
     val isInProgress: Boolean = false,
     val isFinished: Boolean = false,
@@ -131,6 +132,12 @@ data class GameState(
 
     val canAdvanceFloor: Boolean
         get() = targetLevel < 10 && placedOnCurrentLevel >= 1
+
+    val fullLevelCount: Int
+        get() = (1..10).count { placedCountOnLevel(it) == 3 }
+
+    val shortenedLevelCount: Int
+        get() = (1..9).count { placedCountOnLevel(it) in 1..2 }
 
     fun playerName(index: Int): String = if (index == 0) player1 else player2
     fun playerGender(index: Int): PlayerGender = if (index == 0) player1Gender else player2Gender

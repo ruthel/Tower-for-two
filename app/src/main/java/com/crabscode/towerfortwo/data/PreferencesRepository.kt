@@ -34,6 +34,7 @@ class PreferencesRepository(context: Context) {
         const val SEXUAL_RECEIVER = "sexual_receiver"
         const val RECENT_SEXUAL_PRACTICES = "recent_sexual_practices"
         const val RECENT_SEX_POSITIONS = "recent_sex_positions"
+        const val RECENT_CHALLENGE_IDS = "recent_challenge_ids"
         const val FALLEN_BY = "fallen_by"
         const val IN_PROGRESS = "in_progress"
         const val FINISHED = "finished"
@@ -79,6 +80,7 @@ class PreferencesRepository(context: Context) {
             sexualReceiverIndex = prefs.takeIf { it.contains(Keys.SEXUAL_RECEIVER) }?.getInt(Keys.SEXUAL_RECEIVER, 1),
             recentSexualPractices = decodeList(prefs.getString(Keys.RECENT_SEXUAL_PRACTICES, null)),
             recentSexPositionIds = decodeList(prefs.getString(Keys.RECENT_SEX_POSITIONS, null)),
+            recentChallengeIds = decodeList(prefs.getString(Keys.RECENT_CHALLENGE_IDS, null)),
             fallenByIndex = prefs.takeIf { it.contains(Keys.FALLEN_BY) }?.getInt(Keys.FALLEN_BY, 0),
             isInProgress = prefs.getBoolean(Keys.IN_PROGRESS, false),
             isFinished = prefs.getBoolean(Keys.FINISHED, false),
@@ -123,6 +125,7 @@ class PreferencesRepository(context: Context) {
             game.sexualReceiverIndex?.let { putInt(Keys.SEXUAL_RECEIVER, it) } ?: remove(Keys.SEXUAL_RECEIVER)
             putString(Keys.RECENT_SEXUAL_PRACTICES, encodeList(game.recentSexualPractices))
             putString(Keys.RECENT_SEX_POSITIONS, encodeList(game.recentSexPositionIds))
+            putString(Keys.RECENT_CHALLENGE_IDS, encodeList(game.recentChallengeIds))
             game.fallenByIndex?.let { putInt(Keys.FALLEN_BY, it) } ?: remove(Keys.FALLEN_BY)
             putBoolean(Keys.IN_PROGRESS, game.isInProgress)
             putBoolean(Keys.FINISHED, game.isFinished)

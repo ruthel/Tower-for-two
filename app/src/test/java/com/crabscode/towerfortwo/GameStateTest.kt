@@ -70,6 +70,22 @@ class GameStateTest {
     }
 
     @Test
+    fun completionStatsReflectFullAndShortenedLevels() {
+        val game = GameState(
+            placedPositions = setOf(
+                "1:1", "1:2", "1:3",
+                "2:1", "2:2",
+                "3:1",
+            ),
+            blocksPlaced = 6,
+            targetLevel = 3,
+            targetSlot = 2,
+        )
+        assertEquals(1, game.fullLevelCount)
+        assertEquals(2, game.shortenedLevelCount)
+    }
+
+    @Test
     fun finishedGameChecksAllLevels() {
         val game = GameState(
             targetLevel = 10,

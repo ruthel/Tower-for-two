@@ -58,6 +58,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         player2Gender: PlayerGender,
     ) {
         viewModelScope.launch {
+            val previous = _uiState.value.game
             val game = GameState(
                 player1 = player1.trim().ifBlank { "Joueur 1" },
                 player2 = player2.trim().ifBlank { "Joueur 2" },
@@ -68,6 +69,9 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
                 targetLevel = 1,
                 targetSlot = 1,
                 placedPositions = emptySet(),
+                recentSexualPractices = previous.recentSexualPractices,
+                recentSexPositionIds = previous.recentSexPositionIds,
+                recentChallengeIds = previous.recentChallengeIds,
                 isInProgress = true,
             )
             _uiState.update { it.copy(freePlayChallenge = null) }
@@ -84,7 +88,13 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         val slot = game.targetSlot.coerceIn(1, 3)
         if (game.isPlaced(level, slot)) return
 
-        val challenge = pick(level, slot, state.settings, excludeId = null) ?: return
+        val challenge = pick(
+            level = level,
+            slot = slot,
+            settings = state.settings,
+            excludeId = null,
+            recentIds = game.recentChallengeIds,
+        ) ?: return
         val actor = game.currentPlayerIndex
         val placed = game.placedPositions + game.positionKey(level, slot)
         val finished = level == 10 && slot == 3
@@ -110,6 +120,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             currentSexDurationSec = 0,
             sexualGiverIndex = null,
             sexualReceiverIndex = null,
+            recentChallengeIds = (game.recentChallengeIds + challenge.id).takeLast(50),
             isInProgress = !finished,
             isFinished = finished,
         )
@@ -161,7 +172,13 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
     fun useJoker() {
         val state = _uiState.value
         val current = state.currentChallenge ?: return
-        val replacement = pick(current.level, current.slot, state.settings, current.id) ?: return
+        val replacement = pick(
+            level = current.level,
+            slot = current.slot,
+            settings = state.settings,
+            excludeId = current.id,
+            recentIds = state.game.recentChallengeIds,
+        ) ?: return
         val actor = state.game.challengePlayerIndex ?: (1 - state.game.currentPlayerIndex)
         val resolved = SexPositionCatalog.resolve(replacement, state.game, state.settings, actor)
 
@@ -172,6 +189,7 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
             currentSexDurationSec = 0,
             sexualGiverIndex = null,
             sexualReceiverIndex = null,
+            recentChallengeIds = (state.game.recentChallengeIds + replacement.id).takeLast(50),
         )
         updated = applyResolvedAction(updated, resolved)
         viewModelScope.launch { preferences.saveGame(updated) }
@@ -200,10 +218,34 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         val pool = allChallenges.filter { c ->
             c.level <= maxLevel && challengeRepository.isEligibleChallenge(c, state.settings)
         }
-        if (pool.isNotEmpty()) {
-            val previous = state.freePlayChallenge?.id
-            val alternatives = pool.filterNot { it.id == previous }.ifEmpty { pool }
-            _uiState.update { it.copy(freePlayChallenge = alternatives.random()) }
+        chooseFreePlayChallenge(pool)
+    }
+
+    fun pickFinalSurprise() {
+        val state = _uiState.value
+        val pool = allChallenges.filter { c ->
+            c.level == 10 && challengeRepository.isEligibleChallenge(c, state.settings)
+        }
+        chooseFreePlayChallenge(pool)
+    }
+
+    private fun chooseFreePlayChallenge(pool: List<Challenge>) {
+        if (pool.isEmpty()) return
+        val state = _uiState.value
+        val previous = state.freePlayChallenge?.id
+        val recent = state.game.recentChallengeIds.takeLast(30).toSet()
+        val preferred = pool.filterNot { it.id == previous || it.id in recent }
+        val alternatives = preferred.ifEmpty {
+            pool.filterNot { it.id == previous }.ifEmpty { pool }
+        }
+        val chosen = alternatives.random()
+        _uiState.update { it.copy(freePlayChallenge = chosen) }
+        viewModelScope.launch {
+            preferences.saveGame(
+                state.game.copy(
+                    recentChallengeIds = (state.game.recentChallengeIds + chosen.id).takeLast(50),
+                )
+            )
         }
     }
 
@@ -278,10 +320,22 @@ class TowerViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun pick(level: Int, slot: Int, settings: AppSettings, excludeId: String?): Challenge? {
+    private fun pick(
+        level: Int,
+        slot: Int,
+        settings: AppSettings,
+        excludeId: String?,
+        recentIds: List<String>,
+    ): Challenge? {
         val eligible = challengeRepository.eligible(allChallenges, level, slot, settings)
-        val alternatives = eligible.filterNot { it.id == excludeId }.ifEmpty { eligible }
-        if (alternatives.isNotEmpty()) return alternatives.random()
+            .filterNot { it.id == excludeId }
+
+        if (eligible.isNotEmpty()) {
+            val recent = recentIds.takeLast(30).toSet()
+            return eligible.filterNot { it.id in recent }
+                .ifEmpty { eligible }
+                .random()
+        }
 
         // Safety net: never let a valid placement become a dead button.
         val sameCell = allChallenges.filter {
