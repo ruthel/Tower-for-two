@@ -1,5 +1,9 @@
 package com.crabscode.towerfortwo.ui
 
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -7,6 +11,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,6 +78,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -98,6 +104,7 @@ import com.crabscode.towerfortwo.model.LevelThemeCatalog
 import com.crabscode.towerfortwo.model.PlayerGender
 import com.crabscode.towerfortwo.model.ResolvedSexualAction
 import com.crabscode.towerfortwo.model.SexPositionCatalog
+import com.crabscode.towerfortwo.model.SexPositionSpec
 import com.crabscode.towerfortwo.model.SexStickerPose
 import com.crabscode.towerfortwo.model.SexualPractice
 import com.crabscode.towerfortwo.viewmodel.TowerViewModel
@@ -112,6 +119,13 @@ private object Routes {
     const val FALLEN = "fallen"
     const val FINISH = "finish"
     const val FREE = "free"
+}
+
+private fun playUiTone(enabled: Boolean, tone: Int = ToneGenerator.TONE_PROP_ACK) {
+    if (!enabled) return
+    val generator = ToneGenerator(AudioManager.STREAM_MUSIC, 35)
+    generator.startTone(tone, 110)
+    Handler(Looper.getMainLooper()).postDelayed({ generator.release() }, 180)
 }
 
 @Composable
@@ -179,6 +193,7 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
                 onBlockPlaced = viewModel::placeBlock,
                 onNextFloor = viewModel::nextFloor,
                 onJoker = viewModel::useJoker,
+                onRejectChallenge = viewModel::rejectCurrentChallenge,
                 onRerollSexPosition = viewModel::rerollSexPosition,
                 onPersistCountdown = viewModel::persistCountdown,
                 onSettings = {
@@ -265,6 +280,7 @@ fun TowerForTwoApp(viewModel: TowerViewModel) {
             FreePlayScreen(
                 state = state,
                 onNext = viewModel::pickFreePlay,
+                onReject = viewModel::rejectFreePlayChallenge,
                 onReplay = {
                     viewModel.replay()
                     navController.navigate(Routes.GAME) {
@@ -792,6 +808,7 @@ private fun GameScreen(
     onBlockPlaced: () -> Unit,
     onNextFloor: () -> Unit,
     onJoker: () -> Unit,
+    onRejectChallenge: () -> Unit,
     onRerollSexPosition: () -> Unit,
     onPersistCountdown: (String, Int, Int, Boolean) -> Unit,
     onSettings: () -> Unit,
@@ -817,7 +834,10 @@ private fun GameScreen(
         if (!game.isFinished && announcedLevel != level) {
             announcedLevel = level
             showLevelIntro = true
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            if (state.settings.hapticsEnabled) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+            playUiTone(state.settings.soundEnabled, ToneGenerator.TONE_PROP_ACK)
             delay(1_350)
             showLevelIntro = false
         }
@@ -834,7 +854,10 @@ private fun GameScreen(
                     if (game.isFinished) {
                         Button(
                             onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                if (state.settings.hapticsEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                                playUiTone(state.settings.soundEnabled)
                                 onFinish()
                             },
                             modifier = Modifier
@@ -859,7 +882,10 @@ private fun GameScreen(
                         ) {
                             OutlinedButton(
                                 onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    if (state.settings.hapticsEnabled) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
+                                    playUiTone(state.settings.soundEnabled)
                                     onJoker()
                                 },
                                 enabled = challenge != null,
@@ -878,7 +904,10 @@ private fun GameScreen(
 
                             Button(
                                 onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    if (state.settings.hapticsEnabled) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
+                                    playUiTone(state.settings.soundEnabled)
                                     onBlockPlaced()
                                 },
                                 enabled = game.isInProgress &&
@@ -1031,6 +1060,7 @@ private fun GameScreen(
                             settings = state.settings,
                             resolvedSexualAction = game.resolvedSexualAction(),
                             onRerollSexPosition = onRerollSexPosition,
+                            onReject = onRejectChallenge,
                             countdownGame = game,
                             onPersistCountdown = onPersistCountdown,
                         )
@@ -1093,7 +1123,10 @@ private fun GameScreen(
                         item {
                             OutlinedButton(
                                 onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    if (state.settings.hapticsEnabled) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
+                                    playUiTone(state.settings.soundEnabled)
                                     onNextFloor()
                                 },
                                 enabled = game.canAdvanceFloor,
